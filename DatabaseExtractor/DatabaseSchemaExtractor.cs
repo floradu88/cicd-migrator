@@ -6,14 +6,14 @@ using Microsoft.SqlServer.Dac;
 namespace DatabaseExtractor
 {
     /// <summary>
-    /// Extracts database schema from Azure SQL Database to a DACPAC file.
+    /// Extracts database schema from SQL Server (local or Azure SQL Database) to a DACPAC file.
     /// </summary>
     public class DatabaseSchemaExtractor
     {
         /// <summary>
         /// Extracts the database schema from the specified connection string to a DACPAC file.
         /// </summary>
-        /// <param name="connectionString">Azure SQL Database connection string</param>
+        /// <param name="connectionString">SQL Server connection string (local or Azure SQL Database)</param>
         /// <param name="outputDacpacPath">Full path where the DACPAC file will be created</param>
         /// <param name="extractOptions">Optional extraction options. If null, default options will be used.</param>
         /// <returns>True if extraction succeeded, false otherwise</returns>
@@ -95,7 +95,7 @@ namespace DatabaseExtractor
         /// <summary>
         /// Extracts the database schema with custom extraction settings.
         /// </summary>
-        /// <param name="connectionString">Azure SQL Database connection string</param>
+        /// <param name="connectionString">SQL Server connection string (local or Azure SQL Database)</param>
         /// <param name="outputDacpacPath">Full path where the DACPAC file will be created</param>
         /// <param name="extractTableData">Whether to extract table data along with schema</param>
         /// <param name="ignoreExtendedProperties">Whether to ignore extended properties</param>

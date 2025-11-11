@@ -15,13 +15,19 @@ namespace ExampleConsoleApp
             Console.WriteLine();
 
             // ============================================
-            // EXAMPLE 1: Basic Usage
+            // EXAMPLE 1: Basic Usage (Local Database)
             // ============================================
-            Console.WriteLine("Example 1: Basic Schema Extraction");
-            Console.WriteLine("-----------------------------------");
+            Console.WriteLine("Example 1: Basic Schema Extraction (Local SQL Server)");
+            Console.WriteLine("------------------------------------------------------");
 
-            // Your Azure SQL Database connection string
-            string connectionString = "Server=tcp:yourserver.database.windows.net,1433;Database=yourdb;User ID=youruser;Password=yourpassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+            // Local SQL Server with Windows Authentication
+            string connectionString = "Server=(local);Database=YourDatabase;Integrated Security=True;";
+            
+            // Or use LocalDB:
+            // string connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=YourDatabase;Integrated Security=True;";
+            
+            // Or Azure SQL Database:
+            // string connectionString = "Server=tcp:yourserver.database.windows.net,1433;Database=yourdb;User ID=youruser;Password=yourpassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
             // Output path for the DACPAC file
             string outputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyDatabase.dacpac");
@@ -153,8 +159,23 @@ namespace ExampleConsoleApp
             Console.WriteLine();
 
             Console.WriteLine("===========================================");
+            Console.WriteLine("Connection String Examples:");
+            Console.WriteLine("-------------------------------------------");
+            Console.WriteLine("Local SQL Server (Windows Auth):");
+            Console.WriteLine("  Server=(local);Database=YourDatabase;Integrated Security=True;");
+            Console.WriteLine();
+            Console.WriteLine("LocalDB (Windows Auth):");
+            Console.WriteLine("  Server=(localdb)\\MSSQLLocalDB;Database=YourDatabase;Integrated Security=True;");
+            Console.WriteLine();
+            Console.WriteLine("Local SQL Server (SQL Auth):");
+            Console.WriteLine("  Server=(local);Database=YourDatabase;User Id=sa;Password=YourPassword;");
+            Console.WriteLine();
+            Console.WriteLine("Azure SQL Database:");
+            Console.WriteLine("  Server=tcp:yourserver.database.windows.net,1433;Database=yourdb;User ID=user;Password=pass;Encrypt=True;");
+            Console.WriteLine();
+            Console.WriteLine("===========================================");
             Console.WriteLine("To use these examples:");
-            Console.WriteLine("1. Update the connectionString variable with your Azure SQL connection string");
+            Console.WriteLine("1. Update the connectionString variable with your connection string");
             Console.WriteLine("2. Uncomment the example you want to run");
             Console.WriteLine("3. Build and run the application");
             Console.WriteLine();

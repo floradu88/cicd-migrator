@@ -1,16 +1,16 @@
 # DatabaseExtractor Class Library
 
-A .NET Framework 4.6.2 class library for extracting database schema from Azure SQL Database to DACPAC files.
+A .NET Framework 4.6.2 class library for extracting database schema from SQL Server (local or Azure SQL Database) to DACPAC files.
 
 ## Overview
 
-This class library provides a simple, easy-to-use API for extracting database schemas from Azure SQL Database using the Microsoft SQL Server Data-Tier Application Framework (DacFx).
+This class library provides a simple, easy-to-use API for extracting database schemas from SQL Server (local instances or Azure SQL Database) using the Microsoft SQL Server Data-Tier Application Framework (DacFx).
 
 ## Requirements
 
 - .NET Framework 4.6.2 or higher
-- Microsoft.SqlServer.DacFx NuGet package (version 162.0.0 or compatible)
-- Access to Azure SQL Database with appropriate permissions
+- Microsoft.SqlServer.DacFx NuGet package (version 150.5400.1 - SQL Server 2019 DacFx)
+- Access to SQL Server (local or Azure SQL Database) with appropriate permissions
 
 ## Installation
 
@@ -33,7 +33,11 @@ Install-Package DatabaseExtractor
    nuget restore DatabaseExtractor\packages.config
    ```
 
+**Note:** The `Microsoft.SqlServer.DacFx` package (version 150.5400.1) provides the `Microsoft.SqlServer.Dac` namespace. This version corresponds to SQL Server 2019 DacFx and is compatible with .NET Framework 4.6.2.
+
 ## Quick Start
+
+### Local SQL Server
 
 ```csharp
 using DatabaseExtractor;
@@ -41,7 +45,22 @@ using DatabaseExtractor;
 // Create extractor instance
 var extractor = new DatabaseSchemaExtractor();
 
-// Your Azure SQL connection string
+// Local SQL Server with Windows Authentication
+string connectionString = "Server=(local);Database=MyDatabase;Integrated Security=True;";
+
+// Extract schema to DACPAC
+extractor.ExtractSchema(connectionString, @"C:\Output\MyDatabase.dacpac");
+```
+
+### Azure SQL Database
+
+```csharp
+using DatabaseExtractor;
+
+// Create extractor instance
+var extractor = new DatabaseSchemaExtractor();
+
+// Azure SQL connection string
 string connectionString = "Server=tcp:yourserver.database.windows.net,1433;Database=yourdb;User ID=user;Password=pass;Encrypt=True;";
 
 // Extract schema to DACPAC
@@ -95,10 +114,27 @@ Configuration class for extraction options.
 
 ## Usage Examples
 
-### Example 1: Basic Extraction
+### Example 1: Basic Extraction (Local Database)
 
 ```csharp
+using DatabaseExtractor;
+
 var extractor = new DatabaseSchemaExtractor();
+
+// Local SQL Server with Windows Authentication
+string connectionString = "Server=(local);Database=MyDatabase;Integrated Security=True;";
+extractor.ExtractSchema(connectionString, @"C:\Output\MyDatabase.dacpac");
+```
+
+### Example 1b: Basic Extraction (Azure SQL)
+
+```csharp
+using DatabaseExtractor;
+
+var extractor = new DatabaseSchemaExtractor();
+
+// Azure SQL Database
+string connectionString = "Server=tcp:myserver.database.windows.net,1433;Database=MyDatabase;User ID=myuser;Password=mypass;Encrypt=True;";
 extractor.ExtractSchema(connectionString, @"C:\Output\MyDatabase.dacpac");
 ```
 
@@ -157,12 +193,56 @@ catch (Exception ex)
 }
 ```
 
-## Connection String Format
+## Connection String Examples
 
-Azure SQL Database connection string format:
+### Local SQL Server
 
+**Windows Authentication (Recommended for local development):**
+```csharp
+// Local SQL Server
+string connString = "Server=(local);Database=YourDatabase;Integrated Security=True;";
+
+// LocalDB
+string connString = "Server=(localdb)\\MSSQLLocalDB;Database=YourDatabase;Integrated Security=True;";
+
+// Named instance (e.g., SQLEXPRESS)
+string connString = "Server=.\\SQLEXPRESS;Database=YourDatabase;Integrated Security=True;";
 ```
-Server=tcp:servername.database.windows.net,1433;Database=dbname;User ID=username;Password=password;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+
+**SQL Server Authentication:**
+```csharp
+// Local SQL Server
+string connString = "Server=(local);Database=YourDatabase;User Id=sa;Password=YourPassword;";
+
+// LocalDB
+string connString = "Server=(localdb)\\MSSQLLocalDB;Database=YourDatabase;User Id=sa;Password=YourPassword;";
+
+// Named instance
+string connString = "Server=.\\SQLEXPRESS;Database=YourDatabase;User Id=sa;Password=YourPassword;";
+```
+
+### Azure SQL Database
+
+```csharp
+string connString = "Server=tcp:servername.database.windows.net,1433;Database=dbname;User ID=username;Password=password;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+```
+
+### Using ConnectionStringExamples Class
+
+The library includes a `ConnectionStringExamples` class with predefined examples:
+
+```csharp
+using DatabaseExtractor;
+
+// Use predefined examples
+string localDb = ConnectionStringExamples.LocalDbWindowsAuth;
+string localSql = ConnectionStringExamples.LocalSqlAuth;
+string azure = ConnectionStringExamples.AzureSql;
+
+// Or use helper methods
+string local = ConnectionStringExamples.GetLocalExample("MyDatabase");
+string localDb = ConnectionStringExamples.GetLocalDbExample("MyDatabase");
+string azure = ConnectionStringExamples.GetAzureExample("myserver", "mydb", "myuser", "mypass");
 ```
 
 ## Features
@@ -177,7 +257,9 @@ Server=tcp:servername.database.windows.net,1433;Database=dbname;User ID=username
 
 ## Dependencies
 
-- **Microsoft.SqlServer.DacFx** (162.0.0) - SQL Server Data-Tier Application Framework
+- **Microsoft.SqlServer.DacFx** (150.5400.1) - SQL Server Data-Tier Application Framework
+
+**Note:** This package provides the `Microsoft.SqlServer.Dac` namespace used by the `DatabaseSchemaExtractor` class. Ensure you have SQL Server Data Tools (SSDT) or the DacFx runtime installed for the extraction to work.
 
 ## Notes
 

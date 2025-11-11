@@ -42,6 +42,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConnectionStringExamples.cs" />
     <Compile Include="DatabaseSchemaExtractor.cs" />
     <Compile Include="ExtractOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
