@@ -1,0 +1,32 @@
+feat: Add FileDownloadApi for DACPAC file downloads and project summary
+
+Add minimal ASP.NET Web API 2 project for serving DACPAC files via REST endpoints.
+
+Changes:
+- Add FileDownloadApi project with 3 GET endpoints:
+  * GET /api/files/{filename} - Download DACPAC file
+  * GET /api/files/{filename}/status - Get file status information
+  * GET /api/files - List all available files
+- Add FilesController with file download, status check, and listing functionality
+- Configure Web API routing and application startup
+- Add comprehensive API documentation in FileDownloadApi/README.md
+- Update solution file to include FileDownloadApi project
+- Update main README.md with FileDownloadApi information
+- Add PROJECT-SUMMARY.md with complete project overview
+
+Features:
+- File download with proper content headers and attachment disposition
+- File status endpoint with size, last modified, and metadata
+- File listing with download URLs
+- Filename sanitization for security
+- Human-readable file size formatting
+- Configurable files directory via Web.config
+
+Technical details:
+- Target Framework: .NET Framework 4.6.2
+- ASP.NET Web API 2 (v5.2.7)
+- IIS/IIS Express hosting support
+- Default port: 8080
+
+This completes the end-to-end workflow: extract database schema → serve files via API.
+

@@ -1,38 +1,44 @@
 # Database Schema Extractor
 
-A .NET Framework 4.6.2 solution for extracting database schema from Azure SQL Database to DACPAC files.
+A .NET Framework 4.6.2 solution for extracting database schema from Azure SQL Database to DACPAC files and serving them via a minimal API.
 
 ## Solution Structure
 
 ```
 .
-├── DatabaseExtractor/          # Class library project
+├── DatabaseExtractor.sln          # Visual Studio solution file
+│
+├── DatabaseExtractor/             # Class Library Project
 │   ├── DatabaseSchemaExtractor.cs
 │   ├── ExtractOptions.cs
 │   └── DatabaseExtractor.csproj
 │
-├── ExampleConsoleApp/           # Example console application
-│   ├── Program.cs               # Usage examples
+├── ExampleConsoleApp/              # Example Console Application
+│   ├── Program.cs
 │   └── ExampleConsoleApp.csproj
 │
-└── README.md                    # This file
+└── FileDownloadApi/                # Minimal Web API for file downloads
+    ├── Controllers/
+    │   └── FilesController.cs
+    ├── Web.config
+    └── FileDownloadApi.csproj
 ```
 
 ## Quick Start
 
-### 1. Build the Class Library
+### 1. Build the Solution
 
 ```powershell
 # Restore NuGet packages and build
-msbuild DatabaseExtractor\DatabaseExtractor.csproj /t:Restore,Build
+msbuild DatabaseExtractor.sln /t:Restore,Build
 ```
 
 Or in Visual Studio:
-- Open the solution
+- Open `DatabaseExtractor.sln`
 - Right-click solution → Restore NuGet Packages
 - Build → Build Solution
 
-### 2. Use in Your Code
+### 2. Extract Database Schema
 
 ```csharp
 using DatabaseExtractor;
@@ -40,47 +46,61 @@ using DatabaseExtractor;
 var extractor = new DatabaseSchemaExtractor();
 extractor.ExtractSchema(
     connectionString: "Server=tcp:yourserver.database.windows.net,1433;Database=yourdb;User ID=user;Password=pass;Encrypt=True;",
-    outputDacpacPath: @"C:\Output\MyDatabase.dacpac"
+    outputDacpacPath: @"C:\DacpacFiles\MyDatabase.dacpac"
 );
 ```
 
-### 3. Run the Example
+### 3. Serve Files via API
 
-See `ExampleConsoleApp` for complete working examples.
+Start the `FileDownloadApi` project and access files:
+
+```
+GET http://localhost:8080/api/files/MyDatabase.dacpac          # Download file
+GET http://localhost:8080/api/files/MyDatabase.dacpac/status    # Get file status
+GET http://localhost:8080/api/files                             # List all files
+```
 
 ## Projects
 
 ### DatabaseExtractor
 
-Class library containing:
-- `DatabaseSchemaExtractor` - Main extraction class
-- `ExtractOptions` - Configuration options
+Class library for extracting database schemas to DACPAC files.
 
 **Target Framework:** .NET Framework 4.6.2  
 **Output Type:** Class Library (DLL)
 
+[See Documentation](DatabaseExtractor/README.md)
+
 ### ExampleConsoleApp
 
-Console application demonstrating:
-- Basic usage
-- Custom options
-- Error handling
-- Multiple extraction scenarios
+Console application demonstrating usage of the DatabaseExtractor class library.
 
 **Target Framework:** .NET Framework 4.6.2  
 **Output Type:** Console Application (EXE)
 
+[See Documentation](ExampleConsoleApp/README.md)
+
+### FileDownloadApi
+
+Minimal ASP.NET Web API 2 for downloading DACPAC files and checking file status.
+
+**Target Framework:** .NET Framework 4.6.2  
+**Output Type:** Web Application
+
+**API Endpoints:**
+- `GET /api/files/{filename}` - Download DACPAC file
+- `GET /api/files/{filename}/status` - Get file status
+- `GET /api/files` - List all available files
+
+[See Documentation](FileDownloadApi/README.md)
+
 ## Requirements
 
 - .NET Framework 4.6.2
-- Microsoft.SqlServer.DacFx (NuGet package, version 162.0.0)
-- Access to Azure SQL Database
+- Microsoft.SqlServer.DacFx (NuGet package)
+- ASP.NET Web API 2 (for FileDownloadApi)
 - Visual Studio 2017+ or MSBuild
-
-## Documentation
-
-- [DatabaseExtractor README](DatabaseExtractor/README.md) - Class library documentation
-- [ExampleConsoleApp README](ExampleConsoleApp/README.md) - Example application guide
+- IIS or IIS Express (for FileDownloadApi)
 
 ## Building from Command Line
 
@@ -88,14 +108,34 @@ Console application demonstrating:
 # Restore packages
 nuget restore
 
-# Build class library
-msbuild DatabaseExtractor\DatabaseExtractor.csproj /t:Build
+# Build all projects
+msbuild DatabaseExtractor.sln /t:Build
 
-# Build example app
+# Build individual projects
+msbuild DatabaseExtractor\DatabaseExtractor.csproj /t:Build
 msbuild ExampleConsoleApp\ExampleConsoleApp.csproj /t:Build
+msbuild FileDownloadApi\FileDownloadApi.csproj /t:Build
+```
+
+## Usage Workflow
+
+1. **Extract schema** using `DatabaseExtractor` class library
+2. **Store DACPAC files** in a configured directory (default: `App_Data/Files`)
+3. **Serve files** via `FileDownloadApi` endpoints
+4. **Check status** or **list files** using API endpoints
+
+## Configuration
+
+### FileDownloadApi - Files Directory
+
+Edit `FileDownloadApi/Web.config`:
+
+```xml
+<appSettings>
+  <add key="DacpacFilesPath" value="C:\DacpacFiles" />
+</appSettings>
 ```
 
 ## License
 
 This project is provided as-is for internal use.
-
