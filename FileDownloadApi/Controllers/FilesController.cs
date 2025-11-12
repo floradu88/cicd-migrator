@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
+using DatabaseExtractor;
 
 namespace FileDownloadApi.Controllers
 {
@@ -127,9 +128,13 @@ namespace FileDownloadApi.Controllers
 
                 if (Directory.Exists(_filesDirectory))
                 {
+                    // Get both DACPAC and BACPAC files
                     var dacpacFiles = Directory.GetFiles(_filesDirectory, "*.dacpac");
+                    var bacpacFiles = Directory.GetFiles(_filesDirectory, "*.bacpac");
+                    var allFiles = new List<string>(dacpacFiles);
+                    allFiles.AddRange(bacpacFiles);
 
-                    foreach (var filePath in dacpacFiles)
+                    foreach (var filePath in allFiles)
                     {
                         var fileInfo = new FileInfo(filePath);
                         files.Add(new FileInfoResponse
@@ -166,6 +171,81 @@ namespace FileDownloadApi.Controllers
             }
             return $"{len:0.##} {sizes[order]}";
         }
+
+        /// <summary>
+        /// Restores a DACPAC or BACPAC file to a target database.
+        /// POST: api/files/{filename}/restore
+        /// </summary>
+        /// <param name="filename">Name of the DACPAC or BACPAC file to restore</param>
+        /// <param name="request">Restore request containing target connection string and database name</param>
+        /// <returns>Restore operation result</returns>
+        [HttpPost]
+        [Route("{filename}/restore")]
+        public IHttpActionResult RestoreFile(string filename, [FromBody] RestoreRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.TargetConnectionString))
+            {
+                return BadRequest("TargetConnectionString is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.TargetDatabaseName))
+            {
+                return BadRequest("TargetDatabaseName is required.");
+            }
+
+            // Sanitize filename
+            string safeFilename = Path.GetFileName(filename);
+            string filePath = Path.Combine(_filesDirectory, safeFilename);
+
+            if (!File.Exists(filePath))
+            {
+                return ResponseMessage(Request.CreateErrorResponse(HttpStatusCode.NotFound, $"File '{filename}' not found."));
+            }
+
+            try
+            {
+                var extractor = new DatabaseSchemaExtractor();
+                
+                bool success = extractor.RestoreDatabase(
+                    packageFilePath: filePath,
+                    targetConnectionString: request.TargetConnectionString,
+                    targetDatabaseName: request.TargetDatabaseName,
+                    upgradeExisting: request.UpgradeExisting
+                );
+
+                if (success)
+                {
+                    return Ok(new RestoreResponse
+                    {
+                        Success = true,
+                        Message = $"Successfully restored {safeFilename} to database '{request.TargetDatabaseName}'",
+                        Filename = safeFilename,
+                        TargetDatabaseName = request.TargetDatabaseName
+                    });
+                }
+                else
+                {
+                    return InternalServerError(new Exception("Restore operation returned false"));
+                }
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return ResponseMessage(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(new Exception($"Unexpected error during restore: {ex.Message}"));
+            }
+        }
     }
 
     /// <summary>
@@ -193,6 +273,39 @@ namespace FileDownloadApi.Controllers
         public string SizeFormatted { get; set; }
         public DateTime LastModified { get; set; }
         public string DownloadUrl { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for database restore operation.
+    /// </summary>
+    public class RestoreRequest
+    {
+        /// <summary>
+        /// Connection string to the target database server.
+        /// </summary>
+        public string TargetConnectionString { get; set; }
+
+        /// <summary>
+        /// Name of the target database (will be created if it doesn't exist).
+        /// </summary>
+        public string TargetDatabaseName { get; set; }
+
+        /// <summary>
+        /// Whether to upgrade existing database (true) or create new (false).
+        /// Default: false (create new database).
+        /// </summary>
+        public bool UpgradeExisting { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Response model for restore operation.
+    /// </summary>
+    public class RestoreResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
+        public string Filename { get; set; }
+        public string TargetDatabaseName { get; set; }
     }
 }
 

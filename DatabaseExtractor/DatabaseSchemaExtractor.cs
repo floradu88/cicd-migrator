@@ -128,6 +128,81 @@ namespace DatabaseExtractor
             // You can customize this to update a progress bar or log
             Console.WriteLine($"Progress: {e.Status} - {e.Message}");
         }
+
+        /// <summary>
+        /// Restores a DACPAC or BACPAC file to a database.
+        /// </summary>
+        /// <param name="packageFilePath">Full path to the DACPAC or BACPAC file</param>
+        /// <param name="targetConnectionString">Connection string to the target database</param>
+        /// <param name="targetDatabaseName">Name of the target database (will be created if it doesn't exist)</param>
+        /// <param name="upgradeExisting">Whether to upgrade existing database (true) or create new (false)</param>
+        /// <returns>True if restore succeeded, false otherwise</returns>
+        /// <exception cref="ArgumentNullException">Thrown when parameters are null or empty</exception>
+        /// <exception cref="DacServicesException">Thrown when restore fails</exception>
+        public bool RestoreDatabase(string packageFilePath, string targetConnectionString, string targetDatabaseName, bool upgradeExisting = false)
+        {
+            if (string.IsNullOrWhiteSpace(packageFilePath))
+            {
+                throw new ArgumentNullException(nameof(packageFilePath), "Package file path cannot be null or empty.");
+            }
+
+            if (string.IsNullOrWhiteSpace(targetConnectionString))
+            {
+                throw new ArgumentNullException(nameof(targetConnectionString), "Target connection string cannot be null or empty.");
+            }
+
+            if (string.IsNullOrWhiteSpace(targetDatabaseName))
+            {
+                throw new ArgumentNullException(nameof(targetDatabaseName), "Target database name cannot be null or empty.");
+            }
+
+            if (!File.Exists(packageFilePath))
+            {
+                throw new FileNotFoundException($"Package file not found: {packageFilePath}");
+            }
+
+            try
+            {
+                // Determine file type by extension
+                string extension = Path.GetExtension(packageFilePath).ToLowerInvariant();
+                bool isBacpac = extension == ".bacpac";
+
+                // Create DacServices instance with target connection string
+                var dacServices = new DacServices(targetConnectionString);
+                
+                // Set progress event handler
+                dacServices.Message += OnMessage;
+                dacServices.ProgressChanged += OnProgressChanged;
+
+                if (isBacpac)
+                {
+                    // Import BACPAC file
+                    var bacPackage = BacPackage.Load(packageFilePath);
+                    dacServices.ImportBacpac(bacPackage, targetDatabaseName);
+                }
+                else
+                {
+                    // Deploy DACPAC file
+                    var dacPackage = DacPackage.Load(packageFilePath);
+                    var deployOptions = new DacDeployOptions
+                    {
+                        CreateNewDatabase = !upgradeExisting
+                    };
+                    
+                    dacServices.Deploy(dacPackage, targetDatabaseName, upgradeExisting, deployOptions);
+                }
+
+                return true;
+            }
+            catch (DacServicesException ex)
+            {
+                throw new DacServicesException($"Failed to restore database: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unexpected error during database restore: {ex.Message}", ex);
+            }
+        }
     }
 }
 

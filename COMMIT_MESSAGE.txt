@@ -1,23 +1,45 @@
-feat: Switch to BACPAC export and add local database support
+feat: Add database restore functionality via API and class library
 
-Change extraction method from DACPAC to BACPAC export and add comprehensive
-local database connection string examples.
+Add complete database restore capability to restore DACPAC/BACPAC files to
+target databases with support for both local SQL Server and Azure SQL Database.
 
 Changes:
-- Switch from Extract() to ExportBacpac() method (exports schema + data)
-- Remove using statement for DacServices (doesn't implement IDisposable)
-- Update target framework from 4.6.2 to 4.8
-- Add ConnectionStringExamples class with local database examples
-- Update documentation with local SQL Server connection string examples
-- Update ExampleConsoleApp with local database examples
-- Fix compilation errors and ensure code builds successfully
+- Add RestoreDatabase() method to DatabaseSchemaExtractor class
+  * Supports both DACPAC (schema only) and BACPAC (schema + data) files
+  * Automatically detects file type by extension
+  * Creates new databases or upgrades existing ones
+  * Includes comprehensive error handling and progress reporting
+- Add POST /api/files/{filename}/restore endpoint to FileDownloadApi
+  * Accepts JSON request with target connection string and database name
+  * Returns detailed success/error responses
+  * Validates input parameters and file existence
+- Update file listing to include both .dacpac and .bacpac files
+- Add project reference from FileDownloadApi to DatabaseExtractor
+- Update API documentation with restore endpoint details and examples
 
-Technical changes:
-- DatabaseSchemaExtractor now uses ExportBacpac instead of Extract
-- Supports both local SQL Server and Azure SQL Database
-- Connection string examples for LocalDB, named instances, and Azure SQL
-- All projects updated to .NET Framework 4.8
+Technical implementation:
+- RestoreDatabase() uses DacServices.ImportBacpac() for BACPAC files
+- RestoreDatabase() uses DacServices.Deploy() for DACPAC files
+- Supports upgradeExisting flag to control database creation/upgrade behavior
+- Proper error handling for file not found, invalid parameters, and DacFx errors
 
-Breaking changes:
-- Method now exports BACPAC (includes data) instead of DACPAC (schema only)
-- Output file extension should be .bacpac instead of .dacpac
+API Endpoint:
+POST /api/files/{filename}/restore
+Request: { targetConnectionString, targetDatabaseName, upgradeExisting }
+Response: { success, message, filename, targetDatabaseName }
+
+Usage example:
+POST http://localhost:8080/api/files/MyDatabase.bacpac/restore
+{
+  "targetConnectionString": "Server=(local);Database=RestoredDB;Integrated Security=True;",
+  "targetDatabaseName": "RestoredDB",
+  "upgradeExisting": false
+}
+
+Files changed:
+- DatabaseExtractor/DatabaseSchemaExtractor.cs (+75 lines)
+- FileDownloadApi/Controllers/FilesController.cs (+115 lines)
+- FileDownloadApi/FileDownloadApi.csproj (project reference)
+- FileDownloadApi/README.md (documentation)
+
+All code compiles successfully and is ready for use.

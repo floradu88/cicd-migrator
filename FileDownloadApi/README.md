@@ -35,7 +35,7 @@ If not specified, files will be stored in `App_Data/Files` relative to the appli
 
 **GET** `/api/files/{filename}`
 
-Downloads a DACPAC file.
+Downloads a DACPAC or BACPAC file.
 
 **Example:**
 ```
@@ -76,12 +76,50 @@ GET http://localhost:8080/api/files/MyDatabase.dacpac/status
 
 **GET** `/api/files`
 
-Returns a list of all available DACPAC files.
+Returns a list of all available DACPAC and BACPAC files.
+
+### 4. Restore Database
+
+**POST** `/api/files/{filename}/restore`
+
+Restores a DACPAC or BACPAC file to a target database.
+
+**Request Body:**
+```json
+{
+  "targetConnectionString": "Server=(local);Database=TargetDB;Integrated Security=True;",
+  "targetDatabaseName": "TargetDB",
+  "upgradeExisting": false
+}
+```
 
 **Example:**
 ```
-GET http://localhost:8080/api/files
+POST http://localhost:8080/api/files/MyDatabase.bacpac/restore
+Content-Type: application/json
+
+{
+  "targetConnectionString": "Server=(local);Database=RestoredDB;Integrated Security=True;",
+  "targetDatabaseName": "RestoredDB",
+  "upgradeExisting": false
+}
 ```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully restored MyDatabase.bacpac to database 'RestoredDB'",
+  "filename": "MyDatabase.bacpac",
+  "targetDatabaseName": "RestoredDB"
+}
+```
+
+**Notes:**
+- Supports both `.dacpac` (schema only) and `.bacpac` (schema + data) files
+- If `upgradeExisting` is `false`, creates a new database
+- If `upgradeExisting` is `true`, upgrades an existing database
+- The target database will be created if it doesn't exist (for DACPAC files)
 
 **Response:**
 ```json
@@ -126,6 +164,18 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/files/MyDatabase.dacpac/status
 
 # List all files
 Invoke-RestMethod -Uri "http://localhost:8080/api/files"
+
+# Restore database
+$restoreRequest = @{
+    targetConnectionString = "Server=(local);Database=RestoredDB;Integrated Security=True;"
+    targetDatabaseName = "RestoredDB"
+    upgradeExisting = $false
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/files/MyDatabase.bacpac/restore" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $restoreRequest
 ```
 
 ### Using C#
