@@ -64,6 +64,33 @@ Runs the FileDownloadApi using IIS Express.
 - Shows all available endpoints
 - Press any key to stop
 
+### Build-DatabaseProject.ps1
+Builds Visual Studio Database Projects (.sqlproj) from a solution and generates DACPAC files.
+
+**Usage:**
+```powershell
+# Build all database projects in solution (Release configuration)
+.\Build-DatabaseProject.ps1 -SolutionPath "C:\Projects\MyDatabase.sln"
+
+# Build in Debug configuration
+.\Build-DatabaseProject.ps1 -SolutionPath "C:\Projects\MyDatabase.sln" -Configuration Debug
+
+# Build and copy DACPACs to specific output folder
+.\Build-DatabaseProject.ps1 -SolutionPath "C:\Projects\MyDatabase.sln" -OutputPath "C:\Dacpacs"
+
+# Build specific project only
+.\Build-DatabaseProject.ps1 -SolutionPath "C:\Projects\MyDatabase.sln" -ProjectName "MyDatabase"
+```
+
+**Features:**
+- Automatically finds MSBuild (VS 2017, 2019, 2022)
+- Scans solution for all database projects (.sqlproj)
+- Builds projects using MSBuild
+- Locates generated DACPAC files
+- Optional output directory for copying DACPACs
+- Supports filtering by project name
+- Shows build progress and file sizes
+
 ## Quick Start Workflow
 
 1. **Restore packages:**
