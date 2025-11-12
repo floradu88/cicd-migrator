@@ -1,0 +1,12 @@
+{
+  "mcp.servers": {
+    "database-extractor": {
+      "command": "dotnet",
+      "args": [
+        "${workspaceFolder}/McpServer/bin/Debug/McpServer.exe"
+      ],
+      "env": {}
+    }
+  }
+}
+

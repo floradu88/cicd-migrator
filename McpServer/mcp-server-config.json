@@ -1,0 +1,68 @@
+{
+  "mcpServers": {
+    "database-extractor": {
+      "name": "Database Extractor MCP Server",
+      "description": "Extract and restore SQL Server database schemas via MCP",
+      "command": "dotnet",
+      "args": [
+        "D:\\code\\projects\\cicd-database\\McpServer\\bin\\Debug\\McpServer.exe"
+      ],
+      "env": {},
+      "tools": [
+        {
+          "name": "extract_schema",
+          "description": "Extracts database schema from SQL Server (local or Azure) to a BACPAC file",
+          "parameters": {
+            "connectionString": {
+              "type": "string",
+              "description": "SQL Server connection string",
+              "required": true
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "Full path where BACPAC will be created",
+              "required": false
+            },
+            "extractTableData": {
+              "type": "boolean",
+              "description": "Extract table data (default: false)",
+              "required": false
+            }
+          }
+        },
+        {
+          "name": "restore_database",
+          "description": "Restores a DACPAC or BACPAC file to a target database",
+          "parameters": {
+            "packageFilePath": {
+              "type": "string",
+              "description": "Path to DACPAC or BACPAC file",
+              "required": true
+            },
+            "targetConnectionString": {
+              "type": "string",
+              "description": "Target database connection string",
+              "required": true
+            },
+            "targetDatabaseName": {
+              "type": "string",
+              "description": "Target database name",
+              "required": true
+            },
+            "upgradeExisting": {
+              "type": "boolean",
+              "description": "Upgrade existing database (default: false)",
+              "required": false
+            }
+          }
+        },
+        {
+          "name": "list_connection_examples",
+          "description": "Returns example connection strings for various SQL Server configurations",
+          "parameters": {}
+        }
+      ]
+    }
+  }
+}
+

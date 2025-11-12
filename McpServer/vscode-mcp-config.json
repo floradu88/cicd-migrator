@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "database-extractor": {
+      "command": "dotnet",
+      "args": [
+        "D:\\code\\projects\\cicd-database\\McpServer\\bin\\Debug\\McpServer.exe"
+      ],
+      "env": {}
+    }
+  }
+}
+
