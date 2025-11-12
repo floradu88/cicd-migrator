@@ -120,6 +120,78 @@ Content-Type: application/json
 - If `upgradeExisting` is `false`, creates a new database
 - If `upgradeExisting` is `true`, upgrades an existing database
 - The target database will be created if it doesn't exist (for DACPAC files)
+- Connection validation is performed by default before restore (can be disabled by setting `validateConnection: false`)
+
+### 4. Test Database Connection
+
+**POST** `/api/files/test-connection`
+
+Tests a database connection to ensure it's accessible. Validates connection string and returns detailed connection information.
+
+**Request Body:**
+```json
+{
+  "connectionString": "Server=(local);Database=MyDB;Integrated Security=True;",
+  "timeoutSeconds": 30
+}
+```
+
+**Example:**
+```
+POST http://localhost:8080/api/files/test-connection
+Content-Type: application/json
+
+{
+  "connectionString": "Server=(local);Database=AdventureWorks;Integrated Security=True;",
+  "timeoutSeconds": 30
+}
+```
+
+**Response (Success):**
+```json
+{
+  "connectionString": "Server=(local);Database=AdventureWorks;Integrated Security=True;",
+  "isValid": true,
+  "server": "(local)",
+  "database": "AdventureWorks",
+  "authenticationType": "Windows Authentication",
+  "userId": null,
+  "serverVersion": "Microsoft SQL Server 2019 (RTM) - 15.0.2000.5 (X64)...",
+  "tableCount": 71,
+  "message": "Connection successful",
+  "errorCode": null,
+  "errorDetails": null,
+  "testedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Response (Failure):**
+```json
+{
+  "connectionString": "Server=(local);Database=NonExistentDB;Integrated Security=True;",
+  "isValid": false,
+  "server": "(local)",
+  "database": "NonExistentDB",
+  "authenticationType": "Windows Authentication",
+  "userId": null,
+  "serverVersion": null,
+  "tableCount": null,
+  "message": "SQL Server error: Cannot open database 'NonExistentDB' requested by the login. The login failed.",
+  "errorCode": 4060,
+  "errorDetails": "System.Data.SqlClient.SqlException: Cannot open database...",
+  "testedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Notes:**
+- Validates connection string format and accessibility
+- Returns server version, database name, authentication type, and table count
+- Provides detailed error information if connection fails
+- Default timeout is 30 seconds
+
+### 5. List All Files
+
+**GET** `/api/files`
 
 **Response:**
 ```json
@@ -176,6 +248,17 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/files/MyDatabase.bacpac/restor
     -Method Post `
     -ContentType "application/json" `
     -Body $restoreRequest
+
+# Test database connection
+$testRequest = @{
+    connectionString = "Server=(local);Database=MyDB;Integrated Security=True;"
+    timeoutSeconds = 30
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/files/test-connection" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $testRequest
 ```
 
 ### Using C#

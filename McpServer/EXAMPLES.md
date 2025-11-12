@@ -299,7 +299,75 @@ Complete examples for all MCP tools and methods.
 }
 ```
 
-## Example 11: Error Handling - Missing Required Parameter
+## Example 11: Test Database Connection
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "tools/call",
+  "params": {
+    "name": "test_connection",
+    "arguments": {
+      "connectionString": "Server=(local);Database=AdventureWorks;Integrated Security=True;",
+      "timeoutSeconds": 30
+    }
+  }
+}
+```
+
+**Response (Success):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"isValid\": true,\n  \"message\": \"Connection successful\",\n  \"server\": \"(local)\",\n  \"database\": \"AdventureWorks\",\n  \"authenticationType\": \"Windows Authentication\",\n  \"userId\": null,\n  \"serverVersion\": \"Microsoft SQL Server 2019 (RTM) - 15.0.2000.5 (X64)...\",\n  \"tableCount\": 71,\n  \"errorCode\": null,\n  \"errorDetails\": null,\n  \"testedAt\": \"2024-01-15T10:30:00Z\"\n}"
+      }
+    ]
+  }
+}
+```
+
+**Response (Failure):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"isValid\": false,\n  \"message\": \"SQL Server error: Cannot open database 'AdventureWorks' requested by the login. The login failed.\",\n  \"server\": \"(local)\",\n  \"database\": \"AdventureWorks\",\n  \"authenticationType\": \"Windows Authentication\",\n  \"userId\": null,\n  \"serverVersion\": null,\n  \"tableCount\": null,\n  \"errorCode\": 4060,\n  \"errorDetails\": \"System.Data.SqlClient.SqlException: Cannot open database...\",\n  \"testedAt\": \"2024-01-15T10:30:00Z\"\n}"
+      }
+    ]
+  }
+}
+```
+
+## Example 12: Test Azure SQL Database Connection
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "test_connection",
+    "arguments": {
+      "connectionString": "Server=tcp:myserver.database.windows.net,1433;Database=MyDB;User ID=myuser;Password=mypass;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+      "timeoutSeconds": 30
+    }
+  }
+}
+```
+
+## Example 13: Error Handling - Missing Required Parameter
 
 **Request:**
 ```json

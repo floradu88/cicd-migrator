@@ -142,6 +142,11 @@ namespace McpServer
                                     {
                                         type = "boolean",
                                         description = "Whether to extract table data along with schema (default: false - schema only via BACPAC)"
+                                    },
+                                    validateConnection = new
+                                    {
+                                        type = "boolean",
+                                        description = "Whether to validate connection before extraction (default: true)"
                                     }
                                 },
                                 required = new[] { "connectionString" }
@@ -175,6 +180,11 @@ namespace McpServer
                                     {
                                         type = "boolean",
                                         description = "Whether to upgrade existing database (true) or create new (false). Default: false"
+                                    },
+                                    validateConnection = new
+                                    {
+                                        type = "boolean",
+                                        description = "Whether to validate connection before restore (default: true)"
                                     }
                                 },
                                 required = new[] { "packageFilePath", "targetConnectionString", "targetDatabaseName" }
@@ -188,6 +198,29 @@ namespace McpServer
                             {
                                 type = "object",
                                 properties = new { }
+                            }
+                        },
+                        new
+                        {
+                            name = "test_connection",
+                            description = "Tests a database connection to ensure it's accessible. Validates connection string and returns detailed connection information.",
+                            inputSchema = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    connectionString = new
+                                    {
+                                        type = "string",
+                                        description = "SQL Server connection string to test"
+                                    },
+                                    timeoutSeconds = new
+                                    {
+                                        type = "integer",
+                                        description = "Connection timeout in seconds (default: 30)"
+                                    }
+                                },
+                                required = new[] { "connectionString" }
                             }
                         }
                     }
@@ -216,6 +249,10 @@ namespace McpServer
                     
                     case "list_connection_examples":
                         result = HandleListConnectionExamples();
+                        break;
+                    
+                    case "test_connection":
+                        result = HandleTestConnection(arguments);
                         break;
                     
                     default:
@@ -289,8 +326,9 @@ namespace McpServer
             }
 
             var extractTableData = arguments["extractTableData"]?.ToObject<bool>() ?? false;
+            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>() ?? true;
 
-            _extractor.ExtractSchema(connectionString, outputPath, extractTableData: extractTableData);
+            _extractor.ExtractSchema(connectionString, outputPath, extractTableData: extractTableData, validateConnection: validateConnection.Value);
 
             return new
             {
@@ -323,8 +361,9 @@ namespace McpServer
             }
 
             var upgradeExisting = arguments["upgradeExisting"]?.ToObject<bool>() ?? false;
+            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>() ?? true;
 
-            _extractor.RestoreDatabase(packageFilePath, targetConnectionString, targetDatabaseName, upgradeExisting);
+            _extractor.RestoreDatabase(packageFilePath, targetConnectionString, targetDatabaseName, upgradeExisting, validateConnection.Value);
 
             return new
             {
@@ -373,6 +412,34 @@ namespace McpServer
                         usage = "Server=tcp:yourserver.database.windows.net,1433;Database=YourDatabase;User ID=YourUser;Password=YourPassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
                     }
                 }
+            };
+        }
+
+        private static object HandleTestConnection(JObject arguments)
+        {
+            var connectionString = arguments["connectionString"]?.ToString();
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("connectionString is required");
+            }
+
+            var timeoutSeconds = arguments["timeoutSeconds"]?.ToObject<int?>() ?? 30;
+
+            var result = _extractor.TestConnection(connectionString, timeoutSeconds);
+
+            return new
+            {
+                isValid = result.IsValid,
+                message = result.Message,
+                server = result.Server,
+                database = result.Database,
+                authenticationType = result.AuthenticationType,
+                userId = result.UserId,
+                serverVersion = result.ServerVersion,
+                tableCount = result.TableCount,
+                errorCode = result.ErrorCode,
+                errorDetails = result.ErrorDetails,
+                testedAt = result.TestedAt
             };
         }
     }

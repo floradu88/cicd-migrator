@@ -215,7 +215,8 @@ namespace FileDownloadApi.Controllers
                     packageFilePath: filePath,
                     targetConnectionString: request.TargetConnectionString,
                     targetDatabaseName: request.TargetDatabaseName,
-                    upgradeExisting: request.UpgradeExisting
+                    upgradeExisting: request.UpgradeExisting,
+                    validateConnection: request.ValidateConnection ?? true
                 );
 
                 if (success)
@@ -244,6 +245,43 @@ namespace FileDownloadApi.Controllers
             catch (Exception ex)
             {
                 return InternalServerError(new Exception($"Unexpected error during restore: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Tests a database connection.
+        /// POST: api/files/test-connection
+        /// </summary>
+        /// <param name="request">Connection test request</param>
+        /// <returns>Connection test result</returns>
+        [HttpPost]
+        [Route("test-connection")]
+        public IHttpActionResult TestConnection([FromBody] ConnectionTestRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ConnectionString))
+            {
+                return BadRequest("ConnectionString is required.");
+            }
+
+            try
+            {
+                var extractor = new DatabaseSchemaExtractor();
+                var result = extractor.TestConnection(request.ConnectionString, request.TimeoutSeconds ?? 30);
+
+                return Ok(result);
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(new Exception($"Connection test failed: {ex.Message}"));
             }
         }
     }
@@ -295,6 +333,11 @@ namespace FileDownloadApi.Controllers
         /// Default: false (create new database).
         /// </summary>
         public bool UpgradeExisting { get; set; } = false;
+
+        /// <summary>
+        /// Whether to validate connection before restore (default: true).
+        /// </summary>
+        public bool? ValidateConnection { get; set; } = true;
     }
 
     /// <summary>
@@ -306,6 +349,22 @@ namespace FileDownloadApi.Controllers
         public string Message { get; set; }
         public string Filename { get; set; }
         public string TargetDatabaseName { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for connection test operation.
+    /// </summary>
+    public class ConnectionTestRequest
+    {
+        /// <summary>
+        /// Connection string to test.
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        /// <summary>
+        /// Connection timeout in seconds (default: 30).
+        /// </summary>
+        public int? TimeoutSeconds { get; set; } = 30;
     }
 }
 

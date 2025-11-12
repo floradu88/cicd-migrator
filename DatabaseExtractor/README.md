@@ -245,10 +245,78 @@ string localDb = ConnectionStringExamples.GetLocalDbExample("MyDatabase");
 string azure = ConnectionStringExamples.GetAzureExample("myserver", "mydb", "myuser", "mypass");
 ```
 
+## Testing Database Connections
+
+Before extracting or restoring, you can test the database connection:
+
+```csharp
+var extractor = new DatabaseSchemaExtractor();
+
+// Test connection
+var result = extractor.TestConnection(connectionString, timeoutSeconds: 30);
+
+if (result.IsValid)
+{
+    Console.WriteLine($"Connection successful!");
+    Console.WriteLine($"Server: {result.Server}");
+    Console.WriteLine($"Database: {result.Database}");
+    Console.WriteLine($"Authentication: {result.AuthenticationType}");
+    Console.WriteLine($"Server Version: {result.ServerVersion}");
+    Console.WriteLine($"Table Count: {result.TableCount}");
+}
+else
+{
+    Console.WriteLine($"Connection failed: {result.Message}");
+    Console.WriteLine($"Error Code: {result.ErrorCode}");
+}
+```
+
+The `TestConnection` method returns a `ConnectionTestResult` object with:
+- `IsValid`: Whether the connection was successful
+- `Server`: Server name from connection string
+- `Database`: Database name
+- `AuthenticationType`: Windows or SQL Server Authentication
+- `ServerVersion`: SQL Server version information
+- `TableCount`: Number of tables in the database
+- `Message`: Success or error message
+- `ErrorCode`: SQL Server error code (if failed)
+- `ErrorDetails`: Full error details (if failed)
+- `TestedAt`: Timestamp of the test
+
+## Restoring Databases
+
+You can restore a DACPAC or BACPAC file to a target database:
+
+```csharp
+var extractor = new DatabaseSchemaExtractor();
+
+// Restore BACPAC to a new database
+bool success = extractor.RestoreDatabase(
+    packageFilePath: @"C:\Backups\MyDatabase.bacpac",
+    targetConnectionString: "Server=(local);Database=RestoredDB;Integrated Security=True;",
+    targetDatabaseName: "RestoredDB",
+    upgradeExisting: false,
+    validateConnection: true  // Validate connection before restore (default: true)
+);
+
+if (success)
+{
+    Console.WriteLine("Database restored successfully!");
+}
+```
+
+**Notes:**
+- Supports both `.dacpac` (schema only) and `.bacpac` (schema + data) files
+- If `upgradeExisting` is `false`, creates a new database
+- If `upgradeExisting` is `true`, upgrades an existing database
+- Connection validation is performed by default before restore (can be disabled by setting `validateConnection: false`)
+
 ## Features
 
 - ✅ Simple, intuitive API
 - ✅ Automatic output directory creation
+- ✅ Connection validation before extraction and restore
+- ✅ Database restore support (DACPAC and BACPAC)
 - ✅ Progress and message event handlers
 - ✅ Comprehensive error handling
 - ✅ Configurable extraction options
