@@ -4,6 +4,7 @@ using System.Linq;
 using DatabaseExtractor;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Npgsql;
 
 namespace McpServer
 {
