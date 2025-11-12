@@ -1,45 +1,29 @@
-feat: Add database restore functionality via API and class library
+Add database connection validation across all functionality
 
-Add complete database restore capability to restore DACPAC/BACPAC files to
-target databases with support for both local SQL Server and Azure SQL Database.
+- Add TestConnection method to DatabaseSchemaExtractor class
+  - Validates connection string and tests database accessibility
+  - Returns detailed connection information (server, database, version, table count)
+  - Provides comprehensive error details on failure
 
-Changes:
-- Add RestoreDatabase() method to DatabaseSchemaExtractor class
-  * Supports both DACPAC (schema only) and BACPAC (schema + data) files
-  * Automatically detects file type by extension
-  * Creates new databases or upgrades existing ones
-  * Includes comprehensive error handling and progress reporting
-- Add POST /api/files/{filename}/restore endpoint to FileDownloadApi
-  * Accepts JSON request with target connection string and database name
-  * Returns detailed success/error responses
-  * Validates input parameters and file existence
-- Update file listing to include both .dacpac and .bacpac files
-- Add project reference from FileDownloadApi to DatabaseExtractor
-- Update API documentation with restore endpoint details and examples
+- Integrate connection validation into ExtractSchema and RestoreDatabase
+  - Connection validation enabled by default (can be disabled via parameter)
+  - Validates connection before proceeding with extraction/restore operations
+  - Provides early failure detection with clear error messages
 
-Technical implementation:
-- RestoreDatabase() uses DacServices.ImportBacpac() for BACPAC files
-- RestoreDatabase() uses DacServices.Deploy() for DACPAC files
-- Supports upgradeExisting flag to control database creation/upgrade behavior
-- Proper error handling for file not found, invalid parameters, and DacFx errors
+- Add connection test API endpoint
+  - POST /api/files/test-connection
+  - Accepts connection string and optional timeout
+  - Returns ConnectionTestResult with validation details
 
-API Endpoint:
-POST /api/files/{filename}/restore
-Request: { targetConnectionString, targetDatabaseName, upgradeExisting }
-Response: { success, message, filename, targetDatabaseName }
+- Add test_connection MCP tool
+  - Exposes connection testing via Model Context Protocol
+  - Supports all SQL Server connection types (local, LocalDB, Azure SQL)
+  - Includes examples in EXAMPLES.md
 
-Usage example:
-POST http://localhost:8080/api/files/MyDatabase.bacpac/restore
-{
-  "targetConnectionString": "Server=(local);Database=RestoredDB;Integrated Security=True;",
-  "targetDatabaseName": "RestoredDB",
-  "upgradeExisting": false
-}
+- Update all documentation
+  - DatabaseExtractor README: Added TestConnection and RestoreDatabase sections
+  - FileDownloadApi README: Added test-connection endpoint documentation
+  - McpServer EXAMPLES.md: Added connection test examples
 
-Files changed:
-- DatabaseExtractor/DatabaseSchemaExtractor.cs (+75 lines)
-- FileDownloadApi/Controllers/FilesController.cs (+115 lines)
-- FileDownloadApi/FileDownloadApi.csproj (project reference)
-- FileDownloadApi/README.md (documentation)
-
-All code compiles successfully and is ready for use.
+This ensures all database operations validate connectivity before execution,
+reducing runtime errors and providing better user feedback.
