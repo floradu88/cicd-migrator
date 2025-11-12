@@ -354,9 +354,15 @@ namespace McpServer
             }
 
             var extractTableData = arguments["extractTableData"]?.ToObject<bool>() ?? false;
-            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>() ?? true;
+            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>();
+            if (!validateConnection.HasValue) validateConnection = true;
 
-            _extractor.ExtractSchema(connectionString, outputPath, extractTableData: extractTableData, validateConnection: validateConnection.Value);
+            // Use ExtractOptions overload with validateConnection
+            var extractOptions = new ExtractOptions
+            {
+                ExtractAllTableData = extractTableData
+            };
+            _extractor.ExtractSchema(connectionString, outputPath, extractOptions, validateConnection.Value);
 
             return new
             {
@@ -389,7 +395,8 @@ namespace McpServer
             }
 
             var upgradeExisting = arguments["upgradeExisting"]?.ToObject<bool>() ?? false;
-            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>() ?? true;
+            var validateConnection = arguments["validateConnection"]?.ToObject<bool?>();
+            if (!validateConnection.HasValue) validateConnection = true;
 
             _extractor.RestoreDatabase(packageFilePath, targetConnectionString, targetDatabaseName, upgradeExisting, validateConnection.Value);
 
