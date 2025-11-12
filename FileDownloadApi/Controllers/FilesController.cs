@@ -249,7 +249,8 @@ namespace FileDownloadApi.Controllers
 
             try
             {
-                var extractor = new DatabaseSchemaExtractor();
+                // Auto-detect provider from connection string
+                var extractor = new DatabaseSchemaExtractorV2(request.TargetConnectionString);
                 
                 bool success = extractor.RestoreDatabase(
                     packageFilePath: filePath,
@@ -310,7 +311,8 @@ namespace FileDownloadApi.Controllers
 
             try
             {
-                var extractor = new DatabaseSchemaExtractor();
+                // Auto-detect provider from connection string
+                var extractor = new DatabaseSchemaExtractorV2(request.ConnectionString);
                 var result = extractor.TestConnection(request.ConnectionString, request.TimeoutSeconds ?? 30);
 
                 return Ok(result);
@@ -347,7 +349,8 @@ namespace FileDownloadApi.Controllers
 
             try
             {
-                var extractor = new DatabaseSchemaExtractor();
+                // Auto-detect provider from connection string
+                var extractor = new DatabaseSchemaExtractorV2(request.ConnectionString);
                 var result = extractor.ListDatabases(request.ConnectionString, request.TimeoutSeconds ?? 30);
 
                 return Ok(result);
@@ -435,19 +438,25 @@ namespace FileDownloadApi.Controllers
                     }
                 }
 
-                // Ensure filename has .bacpac or .dacpac extension
+                // Auto-detect provider to determine default extension
+                var tempExtractor = new DatabaseSchemaExtractorV2(request.ConnectionString);
+                string defaultExtension = tempExtractor.ProviderType == "PostgreSQL" ? ".sql" : ".bacpac";
+                
+                // Ensure filename has appropriate extension
                 if (!outputFilename.EndsWith(".bacpac", StringComparison.OrdinalIgnoreCase) &&
-                    !outputFilename.EndsWith(".dacpac", StringComparison.OrdinalIgnoreCase))
+                    !outputFilename.EndsWith(".dacpac", StringComparison.OrdinalIgnoreCase) &&
+                    !outputFilename.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) &&
+                    !outputFilename.EndsWith(".dump", StringComparison.OrdinalIgnoreCase))
                 {
-                    outputFilename = Path.ChangeExtension(outputFilename, ".bacpac");
+                    outputFilename = Path.ChangeExtension(outputFilename, defaultExtension);
                 }
 
                 // Sanitize filename
                 string safeFilename = Path.GetFileName(outputFilename);
                 string outputPath = Path.Combine(_filesDirectory, safeFilename);
 
-                // Extract schema using DatabaseExtractor
-                var extractor = new DatabaseSchemaExtractor();
+                // Auto-detect provider from connection string and extract schema
+                var extractor = new DatabaseSchemaExtractorV2(request.ConnectionString);
                 var extractOptions = new ExtractOptions
                 {
                     ExtractAllTableData = request.ExtractTableData ?? false,
@@ -457,7 +466,7 @@ namespace FileDownloadApi.Controllers
 
                 bool success = extractor.ExtractSchema(
                     connectionString: request.ConnectionString,
-                    outputDacpacPath: outputPath,
+                    outputFilePath: outputPath,
                     extractOptions: extractOptions,
                     validateConnection: request.ValidateConnection ?? true
                 );

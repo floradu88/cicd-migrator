@@ -52,6 +52,9 @@
     <Reference Include="Microsoft.SqlServer.Types, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.SqlServer.DacFx.x64.150.5282.3\lib\net46\Microsoft.SqlServer.Types.dll</HintPath>
     </Reference>
+    <Reference Include="Npgsql, Version=4.1.11.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Npgsql.4.1.11\lib\net461\Npgsql.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -63,8 +66,13 @@
   <ItemGroup>
     <Compile Include="ConnectionStringExamples.cs" />
     <Compile Include="DatabaseSchemaExtractor.cs" />
+    <Compile Include="DatabaseSchemaExtractorV2.cs" />
+    <Compile Include="DatabaseProviderFactory.cs" />
     <Compile Include="ExtractOptions.cs" />
+    <Compile Include="IDatabaseProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Providers\PostgreSQLDatabaseProvider.cs" />
+    <Compile Include="Providers\SqlServerDatabaseProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

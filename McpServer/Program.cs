@@ -13,7 +13,6 @@ namespace McpServer
     /// </summary>
     class Program
     {
-        private static DatabaseSchemaExtractor _extractor = new DatabaseSchemaExtractor();
         private static string _defaultOutputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "DacpacFiles");
 
         static void Main(string[] args)
@@ -340,12 +339,30 @@ namespace McpServer
             var outputPath = arguments["outputPath"]?.ToString();
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                // Generate default filename from connection string
+                // Auto-detect provider to determine default extension
                 try
                 {
-                    var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
-                    var dbName = builder.InitialCatalog ?? "Database";
-                    outputPath = Path.Combine(_defaultOutputPath, $"{dbName}.bacpac");
+                    var tempExtractor = new DatabaseSchemaExtractorV2(connectionString);
+                    string defaultExtension = tempExtractor.ProviderType == "PostgreSQL" ? ".sql" : ".bacpac";
+                    
+                    // Try to extract database name from connection string
+                    string dbName = "Database";
+                    try
+                    {
+                        if (tempExtractor.ProviderType == "SqlServer")
+                        {
+                            var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+                            dbName = builder.InitialCatalog ?? "Database";
+                        }
+                        else if (tempExtractor.ProviderType == "PostgreSQL")
+                        {
+                            var builder = new NpgsqlConnectionStringBuilder(connectionString);
+                            dbName = builder.Database ?? "Database";
+                        }
+                    }
+                    catch { }
+                    
+                    outputPath = Path.Combine(_defaultOutputPath, $"{dbName}{defaultExtension}");
                 }
                 catch
                 {
@@ -357,12 +374,15 @@ namespace McpServer
             var validateConnection = arguments["validateConnection"]?.ToObject<bool?>();
             if (!validateConnection.HasValue) validateConnection = true;
 
+            // Auto-detect provider from connection string
+            var extractor = new DatabaseSchemaExtractorV2(connectionString);
+            
             // Use ExtractOptions overload with validateConnection
             var extractOptions = new ExtractOptions
             {
                 ExtractAllTableData = extractTableData
             };
-            _extractor.ExtractSchema(connectionString, outputPath, extractOptions, validateConnection.Value);
+            extractor.ExtractSchema(connectionString, outputPath, extractOptions, validateConnection.Value);
 
             return new
             {
@@ -398,7 +418,9 @@ namespace McpServer
             var validateConnection = arguments["validateConnection"]?.ToObject<bool?>();
             if (!validateConnection.HasValue) validateConnection = true;
 
-            _extractor.RestoreDatabase(packageFilePath, targetConnectionString, targetDatabaseName, upgradeExisting, validateConnection.Value);
+            // Auto-detect provider from connection string
+            var extractor = new DatabaseSchemaExtractorV2(targetConnectionString);
+            extractor.RestoreDatabase(packageFilePath, targetConnectionString, targetDatabaseName, upgradeExisting, validateConnection.Value);
 
             return new
             {
@@ -460,7 +482,9 @@ namespace McpServer
 
             var timeoutSeconds = arguments["timeoutSeconds"]?.ToObject<int?>() ?? 30;
 
-            var result = _extractor.TestConnection(connectionString, timeoutSeconds);
+            // Auto-detect provider from connection string
+            var extractor = new DatabaseSchemaExtractorV2(connectionString);
+            var result = extractor.TestConnection(connectionString, timeoutSeconds);
 
             return new
             {
@@ -488,7 +512,9 @@ namespace McpServer
 
             var timeoutSeconds = arguments["timeoutSeconds"]?.ToObject<int?>() ?? 30;
 
-            var result = _extractor.ListDatabases(connectionString, timeoutSeconds);
+            // Auto-detect provider from connection string
+            var extractor = new DatabaseSchemaExtractorV2(connectionString);
+            var result = extractor.ListDatabases(connectionString, timeoutSeconds);
 
             return new
             {

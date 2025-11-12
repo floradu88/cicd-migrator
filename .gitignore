@@ -37,3 +37,6 @@ packages
 # Article files
 ARTICLE.md
 ARTICLE_LINKEDIN.md
+
+# Commit message files
+COMMIT_MESSAGE.txt
