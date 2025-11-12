@@ -1,36 +1,26 @@
-Add PowerShell build scripts and fix compilation issues
+Fix FilesController constructor error and add extract endpoint
 
-- Add PowerShell scripts for solution management
-  - restore.ps1: Restores NuGet packages for all projects
-    * Auto-detects MSBuild, NuGet.exe, or dotnet CLI
-    * Supports all projects in solution
-  - build.ps1: Builds entire solution with dependency ordering
-    * Supports Debug and Release configurations
-    * Optional clean before build
-    * Shows build output locations
-  - run.ps1: Runs FileDownloadApi using IIS Express
-    * Verifies API is built before running
-    * Auto-detects IIS Express
-    * Port availability checking
-    * API connection testing on startup
-    * Optional browser opening
+- Fix FilesController constructor path resolution
+  - Handle empty AppDomain.CurrentDomain.BaseDirectory
+  - Add fallback to HttpRuntime.AppDomainAppPath for web applications
+  - Add fallback to Environment.CurrentDirectory as last resort
+  - Improve error handling for directory creation
+  - Change default path to App_Data/Files (standard for web apps)
+  - Prevents "Path cannot be empty" exception on API startup
 
-- Add comprehensive documentation
-  - scripts/README.md: Usage guide for all scripts
-  - scripts/TEST_RESULTS.md: Test results and verification
-  - FileDownloadApi/RUN_API.md: Detailed API run instructions
-  - FileDownloadApi/VERIFICATION_SUMMARY.md: API verification checklist
+- Add POST /api/files/extract endpoint
+  - Extracts database schema and automatically saves to configured path
+  - Uses DacpacFilesPath from Web.config if configured
+  - Falls back to App_Data/Files if not configured
+  - Auto-generates filename from database name if not provided
+  - Creates directory automatically if it doesn't exist
+  - Returns file path, size, and download URL in response
+  - Supports all ExtractOptions (extractTableData, ignoreExtendedProperties, etc.)
 
-- Fix compilation issues
-  - Fix nullable bool handling in McpServer/Program.cs
-    * Correct ExtractSchema method call with ExtractOptions
-    * Fix validateConnection parameter handling
-  - Update Web.config framework version from 4.6.2 to 4.8
-    * Matches project target framework
-    * Update both Web.config and FileDownloadApi.dll.config
+- Update FileDownloadApi README
+  - Add documentation for new extract endpoint
+  - Include PowerShell usage examples
+  - Update endpoint numbering
 
-- Fix script encoding issues
-  - Replace Unicode characters (✓, ✗, →, ⚠) with ASCII equivalents
-  - Ensures PowerShell compatibility across all environments
-
-All scripts tested and verified working. Solution builds successfully.
+The extract endpoint enables automatic file saving to the configured path,
+making extracted files immediately available for download via the API.

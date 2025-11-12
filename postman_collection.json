@@ -1,0 +1,232 @@
+{
+	"info": {
+		"_postman_id": "cicd-database-api-collection",
+		"name": "CI/CD Database API",
+		"description": "Complete Postman collection for the CI/CD Database API - DACPAC/BACPAC file management, database extraction, restore, and security auditing endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "File Operations",
+			"item": [
+				{
+					"name": "List All Files",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/files",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files"
+							]
+						},
+						"description": "Returns a list of all available DACPAC and BACPAC files with their metadata (size, last modified, download URL)."
+					},
+					"response": []
+				},
+				{
+					"name": "Download File",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/files/{{filename}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{filename}}"
+							]
+						},
+						"description": "Downloads a DACPAC or BACPAC file by filename. The file is returned as binary content with appropriate headers for file download."
+					},
+					"response": []
+				},
+				{
+					"name": "Get File Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/files/{{filename}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{filename}}",
+								"status"
+							]
+						},
+						"description": "Returns detailed status information about a file including existence, size, last modified date, creation date, and full path."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing and retrieving DACPAC/BACPAC files."
+		},
+		{
+			"name": "Database Operations",
+			"item": [
+				{
+					"name": "Extract Database Schema",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"connectionString\": \"Server=(local);Database=MyDatabase;Integrated Security=True;\",\n  \"outputFilename\": \"MyDatabase.bacpac\",\n  \"extractTableData\": false,\n  \"ignoreExtendedProperties\": false,\n  \"verifyExtraction\": true,\n  \"validateConnection\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/files/extract",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"extract"
+							]
+						},
+						"description": "Extracts database schema (and optionally data) and automatically saves the file to the configured DacpacFilesPath directory. The file is immediately available for download via the download URL returned in the response.\n\n**Connection String Examples:**\n- Local SQL Server: `Server=(local);Database=MyDB;Integrated Security=True;`\n- Named Instance: `Server=localhost\\SQLEXPRESS;Database=MyDB;Integrated Security=True;`\n- SQL Auth: `Server=localhost;Database=MyDB;User Id=sa;Password=YourPassword;`\n- Azure SQL: `Server=tcp:myserver.database.windows.net,1433;Database=MyDB;User Id=user@myserver;Password=YourPassword;Encrypt=True;`\n- LocalDB: `Server=(localdb)\\MSSQLLocalDB;Database=MyDB;Integrated Security=True;`"
+					},
+					"response": []
+				},
+				{
+					"name": "Restore Database",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"targetConnectionString\": \"Server=(local);Database=TargetDB;Integrated Security=True;\",\n  \"targetDatabaseName\": \"TargetDB\",\n  \"upgradeExisting\": false,\n  \"validateConnection\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/files/{{filename}}/restore",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"{{filename}}",
+								"restore"
+							]
+						},
+						"description": "Restores a DACPAC (schema only) or BACPAC (schema + data) file to a target database. The target database will be created if it doesn't exist. Supports both new database creation and upgrading existing databases.\n\n**Notes:**\n- Use `upgradeExisting: false` to create a new database\n- Use `upgradeExisting: true` to upgrade an existing database\n- Connection validation is performed by default before restore"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Database Connection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"connectionString\": \"Server=(local);Database=MyDatabase;Integrated Security=True;\",\n  \"timeoutSeconds\": 30\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/files/test-connection",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"test-connection"
+							]
+						},
+						"description": "Tests a database connection to ensure it's accessible. Returns detailed connection information including server version, database name, authentication type, and table count. Useful for validating connection strings before performing operations.\n\n**Connection String Examples:**\n- Local SQL Server: `Server=(local);Database=MyDB;Integrated Security=True;`\n- Named Instance: `Server=localhost\\SQLEXPRESS;Database=MyDB;Integrated Security=True;`\n- SQL Auth: `Server=localhost;Database=MyDB;User Id=sa;Password=YourPassword;`\n- Azure SQL: `Server=tcp:myserver.database.windows.net,1433;Database=MyDB;User Id=user@myserver;Password=YourPassword;Encrypt=True;`\n- LocalDB: `Server=(localdb)\\MSSQLLocalDB;Database=MyDB;Integrated Security=True;`"
+					},
+					"response": []
+				},
+				{
+					"name": "List Databases (Security Audit)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"connectionString\": \"Server=(local);Integrated Security=True;\",\n  \"timeoutSeconds\": 30\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/files/list-databases",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"list-databases"
+							]
+						},
+						"description": "Lists all databases accessible with the given connection string for security auditing. Returns database information including permissions, ownership, state, recovery model, and security-relevant details. Connects to the master database to query all accessible databases.\n\n**Security Use Cases:**\n- Identify over-privileged accounts\n- Audit database access permissions\n- Review database ownership\n- Check which databases are accessible to a given account\n\n**Connection String Examples:**\n- Local SQL Server: `Server=(local);Integrated Security=True;`\n- Named Instance: `Server=localhost\\SQLEXPRESS;Integrated Security=True;`\n- SQL Auth: `Server=localhost;User Id=sa;Password=YourPassword;`\n- Azure SQL: `Server=tcp:myserver.database.windows.net,1433;User Id=user@myserver;Password=YourPassword;Encrypt=True;`"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for database extraction, restoration, connection testing, and security auditing."
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "filename",
+			"value": "MyDatabase.bacpac",
+			"type": "string"
+		}
+	]
+}
+
