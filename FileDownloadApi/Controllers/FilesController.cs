@@ -284,6 +284,43 @@ namespace FileDownloadApi.Controllers
                 return InternalServerError(new Exception($"Connection test failed: {ex.Message}"));
             }
         }
+
+        /// <summary>
+        /// Lists all databases accessible with the given connection string for security auditing.
+        /// POST: api/files/list-databases
+        /// </summary>
+        /// <param name="request">Database list request</param>
+        /// <returns>List of accessible databases with security information</returns>
+        [HttpPost]
+        [Route("list-databases")]
+        public IHttpActionResult ListDatabases([FromBody] DatabaseListRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ConnectionString))
+            {
+                return BadRequest("ConnectionString is required.");
+            }
+
+            try
+            {
+                var extractor = new DatabaseSchemaExtractor();
+                var result = extractor.ListDatabases(request.ConnectionString, request.TimeoutSeconds ?? 30);
+
+                return Ok(result);
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(new Exception($"Failed to list databases: {ex.Message}"));
+            }
+        }
     }
 
     /// <summary>
@@ -363,6 +400,22 @@ namespace FileDownloadApi.Controllers
 
         /// <summary>
         /// Connection timeout in seconds (default: 30).
+        /// </summary>
+        public int? TimeoutSeconds { get; set; } = 30;
+    }
+
+    /// <summary>
+    /// Request model for database list operation.
+    /// </summary>
+    public class DatabaseListRequest
+    {
+        /// <summary>
+        /// Connection string to use for listing databases (will connect to master database).
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        /// <summary>
+        /// Query timeout in seconds (default: 30).
         /// </summary>
         public int? TimeoutSeconds { get; set; } = 30;
     }

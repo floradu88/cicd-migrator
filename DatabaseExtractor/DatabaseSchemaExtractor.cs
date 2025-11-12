@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.Dac;
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 
@@ -85,6 +86,122 @@ namespace DatabaseExtractor
             {
                 result.IsValid = false;
                 result.Message = $"Connection failed: {ex.Message}";
+                result.ErrorDetails = ex.ToString();
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Lists all databases accessible with the given connection string for security auditing.
+        /// </summary>
+        /// <param name="connectionString">SQL Server connection string (will connect to master database or server-level)</param>
+        /// <param name="timeoutSeconds">Query timeout in seconds (default: 30)</param>
+        /// <returns>List of accessible databases with security-relevant information</returns>
+        /// <exception cref="ArgumentNullException">Thrown when connectionString is null or empty</exception>
+        public DatabaseListResult ListDatabases(string connectionString, int timeoutSeconds = 30)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentNullException(nameof(connectionString), "Connection string cannot be null or empty.");
+            }
+
+            var result = new DatabaseListResult
+            {
+                ConnectionString = connectionString,
+                ListedAt = DateTime.UtcNow,
+                Databases = new List<DatabaseInfo>()
+            };
+
+            try
+            {
+                // Parse connection string to extract details
+                SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connectionString);
+                result.Server = builder.DataSource;
+                result.AuthenticationType = builder.IntegratedSecurity ? "Windows Authentication" : "SQL Server Authentication";
+                result.UserId = builder.UserID;
+
+                // Create a connection string that connects to master database (or remove database specification)
+                // This allows us to query sys.databases
+                var masterConnectionString = new SqlConnectionStringBuilder(connectionString)
+                {
+                    InitialCatalog = "master" // Connect to master to query all databases
+                };
+
+                using (var connection = new SqlConnection(masterConnectionString.ConnectionString))
+                {
+                    connection.Open();
+                    result.IsValid = true;
+                    result.Message = "Successfully retrieved database list";
+
+                    // Query to get all accessible databases with security information
+                    string query = @"
+                        SELECT 
+                            d.name AS DatabaseName,
+                            d.database_id AS DatabaseId,
+                            d.state_desc AS State,
+                            d.recovery_model_desc AS RecoveryModel,
+                            d.collation_name AS Collation,
+                            d.create_date AS CreateDate,
+                            d.compatibility_level AS CompatibilityLevel,
+                            SUSER_SNAME(d.owner_sid) AS Owner,
+                            CASE 
+                                WHEN HAS_PERMS_BY_NAME(d.name, 'DATABASE', 'VIEW DEFINITION') = 1 THEN 1 
+                                ELSE 0 
+                            END AS CanViewDefinition,
+                            CASE 
+                                WHEN HAS_PERMS_BY_NAME(d.name, 'DATABASE', 'CONNECT') = 1 THEN 1 
+                                ELSE 0 
+                            END AS CanConnect,
+                            CASE 
+                                WHEN HAS_PERMS_BY_NAME(d.name, 'DATABASE', 'CREATE TABLE') = 1 THEN 1 
+                                ELSE 0 
+                            END AS CanCreateTable
+                        FROM sys.databases d
+                        WHERE d.state_desc = 'ONLINE'
+                        ORDER BY d.name";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.CommandTimeout = timeoutSeconds;
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var dbInfo = new DatabaseInfo
+                                {
+                                    Name = reader["DatabaseName"]?.ToString(),
+                                    DatabaseId = reader["DatabaseId"] != DBNull.Value ? Convert.ToInt32(reader["DatabaseId"]) : (int?)null,
+                                    State = reader["State"]?.ToString(),
+                                    RecoveryModel = reader["RecoveryModel"]?.ToString(),
+                                    Collation = reader["Collation"]?.ToString(),
+                                    CreateDate = reader["CreateDate"] != DBNull.Value ? Convert.ToDateTime(reader["CreateDate"]) : (DateTime?)null,
+                                    CompatibilityLevel = reader["CompatibilityLevel"] != DBNull.Value ? Convert.ToInt32(reader["CompatibilityLevel"]) : (int?)null,
+                                    Owner = reader["Owner"]?.ToString(),
+                                    CanViewDefinition = reader["CanViewDefinition"] != DBNull.Value && Convert.ToBoolean(reader["CanViewDefinition"]),
+                                    CanConnect = reader["CanConnect"] != DBNull.Value && Convert.ToBoolean(reader["CanConnect"]),
+                                    CanCreateTable = reader["CanCreateTable"] != DBNull.Value && Convert.ToBoolean(reader["CanCreateTable"])
+                                };
+
+                                result.Databases.Add(dbInfo);
+                            }
+                        }
+                    }
+
+                    result.DatabaseCount = result.Databases.Count;
+                }
+            }
+            catch (SqlException ex)
+            {
+                result.IsValid = false;
+                result.Message = $"SQL Server error while listing databases: {ex.Message}";
+                result.ErrorCode = ex.Number;
+                result.ErrorDetails = ex.ToString();
+            }
+            catch (Exception ex)
+            {
+                result.IsValid = false;
+                result.Message = $"Error listing databases: {ex.Message}";
                 result.ErrorDetails = ex.ToString();
             }
 
@@ -374,6 +491,128 @@ namespace DatabaseExtractor
         /// Timestamp when the connection test was performed.
         /// </summary>
         public DateTime TestedAt { get; set; }
+    }
+
+    /// <summary>
+    /// Result of listing databases accessible with a connection string.
+    /// </summary>
+    public class DatabaseListResult
+    {
+        /// <summary>
+        /// The connection string that was used.
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        /// <summary>
+        /// Whether the operation was successful.
+        /// </summary>
+        public bool IsValid { get; set; }
+
+        /// <summary>
+        /// Server name from connection string.
+        /// </summary>
+        public string Server { get; set; }
+
+        /// <summary>
+        /// Authentication type used (Windows Authentication or SQL Server Authentication).
+        /// </summary>
+        public string AuthenticationType { get; set; }
+
+        /// <summary>
+        /// User ID from connection string (if SQL Server Authentication).
+        /// </summary>
+        public string UserId { get; set; }
+
+        /// <summary>
+        /// List of accessible databases.
+        /// </summary>
+        public List<DatabaseInfo> Databases { get; set; }
+
+        /// <summary>
+        /// Total number of databases found.
+        /// </summary>
+        public int DatabaseCount { get; set; }
+
+        /// <summary>
+        /// Operation result message.
+        /// </summary>
+        public string Message { get; set; }
+
+        /// <summary>
+        /// SQL Server error code (if operation failed).
+        /// </summary>
+        public int? ErrorCode { get; set; }
+
+        /// <summary>
+        /// Detailed error information (if operation failed).
+        /// </summary>
+        public string ErrorDetails { get; set; }
+
+        /// <summary>
+        /// Timestamp when the database list was retrieved.
+        /// </summary>
+        public DateTime ListedAt { get; set; }
+    }
+
+    /// <summary>
+    /// Information about a single database.
+    /// </summary>
+    public class DatabaseInfo
+    {
+        /// <summary>
+        /// Database name.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Database ID.
+        /// </summary>
+        public int? DatabaseId { get; set; }
+
+        /// <summary>
+        /// Database state (e.g., ONLINE, OFFLINE).
+        /// </summary>
+        public string State { get; set; }
+
+        /// <summary>
+        /// Recovery model (FULL, SIMPLE, BULK_LOGGED).
+        /// </summary>
+        public string RecoveryModel { get; set; }
+
+        /// <summary>
+        /// Database collation.
+        /// </summary>
+        public string Collation { get; set; }
+
+        /// <summary>
+        /// Database creation date.
+        /// </summary>
+        public DateTime? CreateDate { get; set; }
+
+        /// <summary>
+        /// SQL Server compatibility level.
+        /// </summary>
+        public int? CompatibilityLevel { get; set; }
+
+        /// <summary>
+        /// Database owner.
+        /// </summary>
+        public string Owner { get; set; }
+
+        /// <summary>
+        /// Whether the current user can view database definition.
+        /// </summary>
+        public bool CanViewDefinition { get; set; }
+
+        /// <summary>
+        /// Whether the current user can connect to the database.
+        /// </summary>
+        public bool CanConnect { get; set; }
+
+        /// <summary>
+        /// Whether the current user can create tables in the database.
+        /// </summary>
+        public bool CanCreateTable { get; set; }
     }
 }
 

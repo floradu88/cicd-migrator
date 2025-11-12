@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using DatabaseExtractor;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -222,6 +223,29 @@ namespace McpServer
                                 },
                                 required = new[] { "connectionString" }
                             }
+                        },
+                        new
+                        {
+                            name = "list_databases",
+                            description = "Lists all databases accessible with a given connection string for security auditing. Returns database information including permissions, ownership, and security-relevant details.",
+                            inputSchema = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    connectionString = new
+                                    {
+                                        type = "string",
+                                        description = "SQL Server connection string (will connect to master database to query all databases)"
+                                    },
+                                    timeoutSeconds = new
+                                    {
+                                        type = "integer",
+                                        description = "Query timeout in seconds (default: 30)"
+                                    }
+                                },
+                                required = new[] { "connectionString" }
+                            }
                         }
                     }
                 }
@@ -253,6 +277,10 @@ namespace McpServer
                     
                     case "test_connection":
                         result = HandleTestConnection(arguments);
+                        break;
+                    
+                    case "list_databases":
+                        result = HandleListDatabases(arguments);
                         break;
                     
                     default:
@@ -440,6 +468,46 @@ namespace McpServer
                 errorCode = result.ErrorCode,
                 errorDetails = result.ErrorDetails,
                 testedAt = result.TestedAt
+            };
+        }
+
+        private static object HandleListDatabases(JObject arguments)
+        {
+            var connectionString = arguments["connectionString"]?.ToString();
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("connectionString is required");
+            }
+
+            var timeoutSeconds = arguments["timeoutSeconds"]?.ToObject<int?>() ?? 30;
+
+            var result = _extractor.ListDatabases(connectionString, timeoutSeconds);
+
+            return new
+            {
+                isValid = result.IsValid,
+                message = result.Message,
+                server = result.Server,
+                authenticationType = result.AuthenticationType,
+                userId = result.UserId,
+                databaseCount = result.DatabaseCount,
+                databases = result.Databases?.Select(db => new
+                {
+                    name = db.Name,
+                    databaseId = db.DatabaseId,
+                    state = db.State,
+                    recoveryModel = db.RecoveryModel,
+                    collation = db.Collation,
+                    createDate = db.CreateDate,
+                    compatibilityLevel = db.CompatibilityLevel,
+                    owner = db.Owner,
+                    canViewDefinition = db.CanViewDefinition,
+                    canConnect = db.CanConnect,
+                    canCreateTable = db.CanCreateTable
+                }).ToArray() ?? new object[0],
+                errorCode = result.ErrorCode,
+                errorDetails = result.ErrorDetails,
+                listedAt = result.ListedAt
             };
         }
     }

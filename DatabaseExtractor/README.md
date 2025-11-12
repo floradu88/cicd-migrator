@@ -311,12 +311,70 @@ if (success)
 - If `upgradeExisting` is `true`, upgrades an existing database
 - Connection validation is performed by default before restore (can be disabled by setting `validateConnection: false`)
 
+## Listing Databases for Security Auditing
+
+You can list all databases accessible with a given connection string to identify potential security issues:
+
+```csharp
+var extractor = new DatabaseSchemaExtractor();
+
+// List all accessible databases
+var result = extractor.ListDatabases(connectionString, timeoutSeconds: 30);
+
+if (result.IsValid)
+{
+    Console.WriteLine($"Found {result.DatabaseCount} databases on server: {result.Server}");
+    Console.WriteLine($"Authentication: {result.AuthenticationType}");
+    Console.WriteLine($"User: {result.UserId ?? "Windows User"}");
+    Console.WriteLine();
+    
+    foreach (var db in result.Databases)
+    {
+        Console.WriteLine($"Database: {db.Name}");
+        Console.WriteLine($"  Owner: {db.Owner}");
+        Console.WriteLine($"  State: {db.State}");
+        Console.WriteLine($"  Recovery Model: {db.RecoveryModel}");
+        Console.WriteLine($"  Can Connect: {db.CanConnect}");
+        Console.WriteLine($"  Can View Definition: {db.CanViewDefinition}");
+        Console.WriteLine($"  Can Create Table: {db.CanCreateTable}");
+        Console.WriteLine();
+    }
+}
+else
+{
+    Console.WriteLine($"Failed to list databases: {result.Message}");
+}
+```
+
+The `ListDatabases` method returns a `DatabaseListResult` object with:
+- `IsValid`: Whether the operation was successful
+- `Server`: Server name
+- `AuthenticationType`: Authentication method used
+- `UserId`: User ID (if SQL Server Authentication)
+- `DatabaseCount`: Total number of databases found
+- `Databases`: List of `DatabaseInfo` objects with:
+  - `Name`: Database name
+  - `Owner`: Database owner
+  - `State`: Database state (ONLINE, OFFLINE, etc.)
+  - `RecoveryModel`: Recovery model (FULL, SIMPLE, BULK_LOGGED)
+  - `CanConnect`: Whether current user can connect
+  - `CanViewDefinition`: Whether current user can view database definition
+  - `CanCreateTable`: Whether current user can create tables
+  - Additional metadata (collation, creation date, compatibility level)
+
+**Security Use Cases:**
+- Audit database access permissions
+- Identify databases accessible with given credentials
+- Check for over-privileged accounts
+- Verify principle of least privilege compliance
+
 ## Features
 
 - ✅ Simple, intuitive API
 - ✅ Automatic output directory creation
 - ✅ Connection validation before extraction and restore
 - ✅ Database restore support (DACPAC and BACPAC)
+- ✅ Database listing for security auditing
 - ✅ Progress and message event handlers
 - ✅ Comprehensive error handling
 - ✅ Configurable extraction options

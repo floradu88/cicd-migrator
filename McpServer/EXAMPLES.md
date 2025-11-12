@@ -367,7 +367,47 @@ Complete examples for all MCP tools and methods.
 }
 ```
 
-## Example 13: Error Handling - Missing Required Parameter
+## Example 13: List All Databases (Security Auditing)
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "tools/call",
+  "params": {
+    "name": "list_databases",
+    "arguments": {
+      "connectionString": "Server=(local);Integrated Security=True;",
+      "timeoutSeconds": 30
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"isValid\": true,\n  \"message\": \"Successfully retrieved database list\",\n  \"server\": \"(local)\",\n  \"authenticationType\": \"Windows Authentication\",\n  \"userId\": null,\n  \"databaseCount\": 5,\n  \"databases\": [\n    {\n      \"name\": \"master\",\n      \"databaseId\": 1,\n      \"state\": \"ONLINE\",\n      \"recoveryModel\": \"SIMPLE\",\n      \"collation\": \"SQL_Latin1_General_CP1_CI_AS\",\n      \"createDate\": \"2003-04-08T09:10:00\",\n      \"compatibilityLevel\": 150,\n      \"owner\": \"sa\",\n      \"canViewDefinition\": true,\n      \"canConnect\": true,\n      \"canCreateTable\": false\n    },\n    {\n      \"name\": \"MyDatabase\",\n      \"databaseId\": 5,\n      \"state\": \"ONLINE\",\n      \"recoveryModel\": \"FULL\",\n      \"collation\": \"SQL_Latin1_General_CP1_CI_AS\",\n      \"createDate\": \"2024-01-15T10:00:00\",\n      \"compatibilityLevel\": 150,\n      \"owner\": \"DOMAIN\\\\User\",\n      \"canViewDefinition\": true,\n      \"canConnect\": true,\n      \"canCreateTable\": true\n    }\n  ],\n  \"errorCode\": null,\n  \"errorDetails\": null,\n  \"listedAt\": \"2025-01-15T10:30:00Z\"\n}"
+      }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+- Security auditing: Identify all databases accessible with given credentials
+- Permission verification: Check what permissions the account has on each database
+- Compliance: Verify principle of least privilege
+- Access review: Identify over-privileged accounts
+
+## Example 14: Error Handling - Missing Required Parameter
 
 **Request:**
 ```json

@@ -189,7 +189,83 @@ Content-Type: application/json
 - Provides detailed error information if connection fails
 - Default timeout is 30 seconds
 
-### 5. List All Files
+### 5. List Databases (Security Auditing)
+
+**POST** `/api/files/list-databases`
+
+Lists all databases accessible with the given connection string for security auditing. Returns database information including permissions, ownership, and security-relevant details.
+
+**Request Body:**
+```json
+{
+  "connectionString": "Server=(local);Integrated Security=True;",
+  "timeoutSeconds": 30
+}
+```
+
+**Example:**
+```
+POST http://localhost:8080/api/files/list-databases
+Content-Type: application/json
+
+{
+  "connectionString": "Server=(local);Integrated Security=True;",
+  "timeoutSeconds": 30
+}
+```
+
+**Response (Success):**
+```json
+{
+  "connectionString": "Server=(local);Integrated Security=True;",
+  "isValid": true,
+  "server": "(local)",
+  "authenticationType": "Windows Authentication",
+  "userId": null,
+  "databaseCount": 5,
+  "message": "Successfully retrieved database list",
+  "databases": [
+    {
+      "name": "master",
+      "databaseId": 1,
+      "state": "ONLINE",
+      "recoveryModel": "SIMPLE",
+      "collation": "SQL_Latin1_General_CP1_CI_AS",
+      "createDate": "2003-04-08T09:10:00",
+      "compatibilityLevel": 150,
+      "owner": "sa",
+      "canViewDefinition": true,
+      "canConnect": true,
+      "canCreateTable": false
+    },
+    {
+      "name": "MyDatabase",
+      "databaseId": 5,
+      "state": "ONLINE",
+      "recoveryModel": "FULL",
+      "collation": "SQL_Latin1_General_CP1_CI_AS",
+      "createDate": "2024-01-15T10:00:00",
+      "compatibilityLevel": 150,
+      "owner": "DOMAIN\\User",
+      "canViewDefinition": true,
+      "canConnect": true,
+      "canCreateTable": true
+    }
+  ],
+  "errorCode": null,
+  "errorDetails": null,
+  "listedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Notes:**
+- Connects to master database to query all accessible databases
+- Returns security-relevant information (permissions, ownership)
+- Useful for security auditing and identifying over-privileged accounts
+- Only lists ONLINE databases
+- Default timeout is 30 seconds
+
+### 6. List All Files
 
 **GET** `/api/files`
 
@@ -259,6 +335,17 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/files/test-connection" `
     -Method Post `
     -ContentType "application/json" `
     -Body $testRequest
+
+# List all accessible databases (security audit)
+$listRequest = @{
+    connectionString = "Server=(local);Integrated Security=True;"
+    timeoutSeconds = 30
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/files/list-databases" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $listRequest
 ```
 
 ### Using C#
