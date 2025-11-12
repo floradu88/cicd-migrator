@@ -92,11 +92,13 @@ namespace FileDownloadApi.Controllers
 
             try
             {
-                var fileBytes = File.ReadAllBytes(filePath);
                 var fileInfo = new FileInfo(filePath);
-
+                
+                // Use streaming for large files instead of loading entire file into memory
+                var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 8192, useAsync: true);
+                
                 var response = Request.CreateResponse(HttpStatusCode.OK);
-                response.Content = new ByteArrayContent(fileBytes);
+                response.Content = new StreamContent(fileStream);
                 response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
                 response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
                 {

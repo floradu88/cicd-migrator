@@ -7,6 +7,9 @@ namespace FileDownloadApi
         public static void Register(HttpConfiguration config)
         {
             // Web API configuration and services
+            // Note: Large file download support (>512MB) is configured in Web.config
+            // - maxRequestLength and maxAllowedContentLength are set to 2GB
+            // - File downloads use streaming to avoid memory issues
 
             // Web API routes
             config.MapHttpAttributeRoutes();
