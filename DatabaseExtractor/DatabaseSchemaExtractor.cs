@@ -1,7 +1,7 @@
+using Microsoft.SqlServer.Dac;
 using System;
 using System.Data.SqlClient;
 using System.IO;
-using Microsoft.SqlServer.Dac;
 
 namespace DatabaseExtractor
 {
@@ -54,33 +54,24 @@ namespace DatabaseExtractor
                 // Extract database name from connection string
                 SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(connectionString);
                 string databaseName = builder.InitialCatalog;
-                
+
                 if (string.IsNullOrWhiteSpace(databaseName))
                 {
                     throw new ArgumentException("Database name not found in connection string. Ensure 'Database' or 'Initial Catalog' is specified.");
                 }
 
                 // Create DacServices instance with connection string
-                using (DacServices dacServices = new DacServices(connectionString))
-                {
-                    // Set progress event handler
-                    dacServices.Message += OnMessage;
-                    dacServices.ProgressChanged += OnProgressChanged;
+                var dacServices = new DacServices(connectionString);
+                
+                // Set progress event handler
+                dacServices.Message += OnMessage;
+                dacServices.ProgressChanged += OnProgressChanged;
 
-                    // Convert ExtractOptions to DacExtractOptions
-                    DacExtractOptions dacExtractOptions = new DacExtractOptions
-                    {
-                        ExtractAllTableData = extractOptions.ExtractAllTableData,
-                        IgnoreExtendedProperties = extractOptions.IgnoreExtendedProperties,
-                        VerifyExtraction = extractOptions.VerifyExtraction
-                    };
+                // Export the database to BACPAC (includes schema and data)
+                // Parameters: packageFilePath, databaseName
+                dacServices.ExportBacpac(outputDacpacPath, databaseName);
 
-                    // Extract the database schema to DACPAC
-                    // Parameters: packageFilePath, databaseName, options
-                    dacServices.Extract(outputDacpacPath, databaseName, dacExtractOptions);
-
-                    return true;
-                }
+                return true;
             }
             catch (DacServicesException ex)
             {

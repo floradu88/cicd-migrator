@@ -1,32 +1,23 @@
-feat: Add FileDownloadApi for DACPAC file downloads and project summary
+feat: Switch to BACPAC export and add local database support
 
-Add minimal ASP.NET Web API 2 project for serving DACPAC files via REST endpoints.
+Change extraction method from DACPAC to BACPAC export and add comprehensive
+local database connection string examples.
 
 Changes:
-- Add FileDownloadApi project with 3 GET endpoints:
-  * GET /api/files/{filename} - Download DACPAC file
-  * GET /api/files/{filename}/status - Get file status information
-  * GET /api/files - List all available files
-- Add FilesController with file download, status check, and listing functionality
-- Configure Web API routing and application startup
-- Add comprehensive API documentation in FileDownloadApi/README.md
-- Update solution file to include FileDownloadApi project
-- Update main README.md with FileDownloadApi information
-- Add PROJECT-SUMMARY.md with complete project overview
+- Switch from Extract() to ExportBacpac() method (exports schema + data)
+- Remove using statement for DacServices (doesn't implement IDisposable)
+- Update target framework from 4.6.2 to 4.8
+- Add ConnectionStringExamples class with local database examples
+- Update documentation with local SQL Server connection string examples
+- Update ExampleConsoleApp with local database examples
+- Fix compilation errors and ensure code builds successfully
 
-Features:
-- File download with proper content headers and attachment disposition
-- File status endpoint with size, last modified, and metadata
-- File listing with download URLs
-- Filename sanitization for security
-- Human-readable file size formatting
-- Configurable files directory via Web.config
+Technical changes:
+- DatabaseSchemaExtractor now uses ExportBacpac instead of Extract
+- Supports both local SQL Server and Azure SQL Database
+- Connection string examples for LocalDB, named instances, and Azure SQL
+- All projects updated to .NET Framework 4.8
 
-Technical details:
-- Target Framework: .NET Framework 4.6.2
-- ASP.NET Web API 2 (v5.2.7)
-- IIS/IIS Express hosting support
-- Default port: 8080
-
-This completes the end-to-end workflow: extract database schema → serve files via API.
-
+Breaking changes:
+- Method now exports BACPAC (includes data) instead of DACPAC (schema only)
+- Output file extension should be .bacpac instead of .dacpac
