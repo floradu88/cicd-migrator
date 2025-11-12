@@ -91,6 +91,32 @@ Builds Visual Studio Database Projects (.sqlproj) from a solution and generates 
 - Supports filtering by project name
 - Shows build progress and file sizes
 
+### Create-DatabaseProjectFromDacpac.ps1
+Creates a Visual Studio SQL Server Database Project from a DACPAC file and saves the solution.
+
+**Usage:**
+```powershell
+# Create project from DACPAC
+.\Create-DatabaseProjectFromDacpac.ps1 -DacpacPath "C:\Dacpacs\MyDatabase.dacpac" -SolutionPath "C:\Projects\MyDatabase.sln"
+
+# Specify custom project name
+.\Create-DatabaseProjectFromDacpac.ps1 -DacpacPath "C:\Dacpacs\MyDatabase.dacpac" -SolutionPath "C:\Projects\MyDatabase.sln" -ProjectName "MyDatabaseProject"
+
+# Use Visual Studio 2022
+.\Create-DatabaseProjectFromDacpac.ps1 -DacpacPath "C:\Dacpacs\MyDatabase.dacpac" -SolutionPath "C:\Projects\MyDatabase.sln" -VisualStudioVersion 2022
+```
+
+**Features:**
+- Automatically finds SqlPackage.exe (SSDT)
+- Creates .sqlproj file with proper structure
+- Extracts DACPAC to project folder
+- Creates solution (.sln) file
+- Sets up project folders (Tables, Views, Stored Procedures, etc.)
+- Supports Visual Studio 2019 and 2022
+- Provides next steps for manual import if needed
+
+**Note:** The script creates the project structure and extracts the DACPAC. You may need to manually import the DACPAC in Visual Studio if automatic import fails (right-click project -> Import -> Data-tier Application).
+
 ## Quick Start Workflow
 
 1. **Restore packages:**
