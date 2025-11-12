@@ -20,13 +20,53 @@ namespace FileDownloadApi.Controllers
         public FilesController()
         {
             // Get the files directory from configuration or use default
-            _filesDirectory = System.Configuration.ConfigurationManager.AppSettings["DacpacFilesPath"] 
-                ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Files");
+            var configuredPath = System.Configuration.ConfigurationManager.AppSettings["DacpacFilesPath"];
+            
+            if (!string.IsNullOrWhiteSpace(configuredPath))
+            {
+                _filesDirectory = configuredPath;
+            }
+            else
+            {
+                // Use default: App_Data/Files relative to application root
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                
+                // Handle empty or invalid base directory
+                if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory))
+                {
+                    // Try HttpRuntime.AppDomainAppPath for web applications
+                    try
+                    {
+                        baseDirectory = System.Web.HttpRuntime.AppDomainAppPath;
+                    }
+                    catch
+                    {
+                        // Fallback to current directory
+                        baseDirectory = Directory.GetCurrentDirectory();
+                    }
+                }
+                
+                // Ensure we have a valid base directory
+                if (string.IsNullOrWhiteSpace(baseDirectory))
+                {
+                    baseDirectory = Environment.CurrentDirectory;
+                }
+                
+                _filesDirectory = Path.Combine(baseDirectory, "App_Data", "Files");
+            }
             
             // Ensure directory exists
-            if (!Directory.Exists(_filesDirectory))
+            if (!string.IsNullOrWhiteSpace(_filesDirectory) && !Directory.Exists(_filesDirectory))
             {
-                Directory.CreateDirectory(_filesDirectory);
+                try
+                {
+                    Directory.CreateDirectory(_filesDirectory);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail constructor - directory creation will be attempted on first use
+                    System.Diagnostics.Debug.WriteLine($"Warning: Could not create directory '{_filesDirectory}': {ex.Message}");
+                }
             }
         }
 
@@ -321,6 +361,139 @@ namespace FileDownloadApi.Controllers
                 return InternalServerError(new Exception($"Failed to list databases: {ex.Message}"));
             }
         }
+
+        /// <summary>
+        /// Extracts database schema and automatically saves to the configured files directory.
+        /// POST: api/files/extract
+        /// </summary>
+        /// <param name="request">Extract request containing connection string and options</param>
+        /// <returns>Extract operation result with file path</returns>
+        [HttpPost]
+        [Route("extract")]
+        public IHttpActionResult ExtractSchema([FromBody] ExtractRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ConnectionString))
+            {
+                return BadRequest("ConnectionString is required.");
+            }
+
+            try
+            {
+                // Ensure the files directory exists
+                if (!Directory.Exists(_filesDirectory))
+                {
+                    Directory.CreateDirectory(_filesDirectory);
+                }
+
+                // Generate output filename from connection string or use provided name
+                string outputFilename = request.OutputFilename;
+                if (string.IsNullOrWhiteSpace(outputFilename))
+                {
+                    try
+                    {
+                        // Parse connection string to extract database name
+                        var connectionString = request.ConnectionString;
+                        var dbName = "Database";
+                        
+                        // Try to extract database name from connection string
+                        var dbIndex = connectionString.IndexOf("Database=", StringComparison.OrdinalIgnoreCase);
+                        if (dbIndex >= 0)
+                        {
+                            var startIndex = dbIndex + 9; // "Database=".Length
+                            var endIndex = connectionString.IndexOf(';', startIndex);
+                            if (endIndex < 0) endIndex = connectionString.Length;
+                            dbName = connectionString.Substring(startIndex, endIndex - startIndex).Trim();
+                        }
+                        else
+                        {
+                            // Try "Initial Catalog="
+                            var catalogIndex = connectionString.IndexOf("Initial Catalog=", StringComparison.OrdinalIgnoreCase);
+                            if (catalogIndex >= 0)
+                            {
+                                var startIndex = catalogIndex + 16; // "Initial Catalog=".Length
+                                var endIndex = connectionString.IndexOf(';', startIndex);
+                                if (endIndex < 0) endIndex = connectionString.Length;
+                                dbName = connectionString.Substring(startIndex, endIndex - startIndex).Trim();
+                            }
+                        }
+                        
+                        if (string.IsNullOrWhiteSpace(dbName))
+                        {
+                            dbName = "Database";
+                        }
+                        
+                        outputFilename = $"{dbName}.bacpac";
+                    }
+                    catch
+                    {
+                        outputFilename = $"Database_{DateTime.UtcNow:yyyyMMddHHmmss}.bacpac";
+                    }
+                }
+
+                // Ensure filename has .bacpac or .dacpac extension
+                if (!outputFilename.EndsWith(".bacpac", StringComparison.OrdinalIgnoreCase) &&
+                    !outputFilename.EndsWith(".dacpac", StringComparison.OrdinalIgnoreCase))
+                {
+                    outputFilename = Path.ChangeExtension(outputFilename, ".bacpac");
+                }
+
+                // Sanitize filename
+                string safeFilename = Path.GetFileName(outputFilename);
+                string outputPath = Path.Combine(_filesDirectory, safeFilename);
+
+                // Extract schema using DatabaseExtractor
+                var extractor = new DatabaseSchemaExtractor();
+                var extractOptions = new ExtractOptions
+                {
+                    ExtractAllTableData = request.ExtractTableData ?? false,
+                    IgnoreExtendedProperties = request.IgnoreExtendedProperties ?? false,
+                    VerifyExtraction = request.VerifyExtraction ?? true
+                };
+
+                bool success = extractor.ExtractSchema(
+                    connectionString: request.ConnectionString,
+                    outputDacpacPath: outputPath,
+                    extractOptions: extractOptions,
+                    validateConnection: request.ValidateConnection ?? true
+                );
+
+                if (success)
+                {
+                    var fileInfo = new FileInfo(outputPath);
+                    return Ok(new ExtractResponse
+                    {
+                        Success = true,
+                        Message = "Schema extracted successfully",
+                        Filename = safeFilename,
+                        FilePath = outputPath,
+                        FileSize = fileInfo.Exists ? fileInfo.Length : 0,
+                        FileSizeFormatted = fileInfo.Exists ? FormatFileSize(fileInfo.Length) : "0 B",
+                        DownloadUrl = $"{Request.RequestUri.Scheme}://{Request.RequestUri.Authority}/api/files/{safeFilename}"
+                    });
+                }
+                else
+                {
+                    return InternalServerError(new Exception("Extraction completed but returned false."));
+                }
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(new Exception($"Failed to extract schema: {ex.Message}"));
+            }
+        }
     }
 
     /// <summary>
@@ -418,6 +591,57 @@ namespace FileDownloadApi.Controllers
         /// Query timeout in seconds (default: 30).
         /// </summary>
         public int? TimeoutSeconds { get; set; } = 30;
+    }
+
+    /// <summary>
+    /// Request model for schema extraction operation.
+    /// </summary>
+    public class ExtractRequest
+    {
+        /// <summary>
+        /// SQL Server connection string (local or Azure SQL Database).
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        /// <summary>
+        /// Output filename (optional). If not provided, generated from database name.
+        /// Files are automatically saved to the configured DacpacFilesPath.
+        /// </summary>
+        public string OutputFilename { get; set; }
+
+        /// <summary>
+        /// Whether to extract table data along with schema (default: false - schema only).
+        /// </summary>
+        public bool? ExtractTableData { get; set; } = false;
+
+        /// <summary>
+        /// Whether to ignore extended properties (default: false).
+        /// </summary>
+        public bool? IgnoreExtendedProperties { get; set; } = false;
+
+        /// <summary>
+        /// Whether to verify extraction (default: true).
+        /// </summary>
+        public bool? VerifyExtraction { get; set; } = true;
+
+        /// <summary>
+        /// Whether to validate connection before extraction (default: true).
+        /// </summary>
+        public bool? ValidateConnection { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Response model for extract operation.
+    /// </summary>
+    public class ExtractResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
+        public string Filename { get; set; }
+        public string FilePath { get; set; }
+        public long FileSize { get; set; }
+        public string FileSizeFormatted { get; set; }
+        public string DownloadUrl { get; set; }
     }
 }
 

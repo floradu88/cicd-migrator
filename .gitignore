@@ -33,3 +33,7 @@ x86/
 *.temp
 *.log
 packages
+
+# Article files
+ARTICLE.md
+ARTICLE_LINKEDIN.md

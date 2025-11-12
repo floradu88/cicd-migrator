@@ -189,7 +189,54 @@ Content-Type: application/json
 - Provides detailed error information if connection fails
 - Default timeout is 30 seconds
 
-### 5. List Databases (Security Auditing)
+### 5. Extract Database Schema
+
+**POST** `/api/files/extract`
+
+Extracts database schema and automatically saves the file to the configured `DacpacFilesPath` directory.
+
+**Request Body:**
+```json
+{
+  "connectionString": "Server=(local);Database=MyDatabase;Integrated Security=True;",
+  "outputFilename": "MyDatabase.bacpac",
+  "extractTableData": false,
+  "validateConnection": true
+}
+```
+
+**Example:**
+```
+POST http://localhost:8080/api/files/extract
+Content-Type: application/json
+
+{
+  "connectionString": "Server=(local);Database=AdventureWorks;Integrated Security=True;",
+  "outputFilename": "AdventureWorks.bacpac",
+  "extractTableData": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Schema extracted successfully",
+  "filename": "AdventureWorks.bacpac",
+  "filePath": "C:\\DacpacFiles\\AdventureWorks.bacpac",
+  "fileSize": 5242880,
+  "fileSizeFormatted": "5 MB",
+  "downloadUrl": "http://localhost:8080/api/files/AdventureWorks.bacpac"
+}
+```
+
+**Notes:**
+- Files are automatically saved to the path configured in `Web.config` → `DacpacFilesPath`
+- If `outputFilename` is not provided, it's generated from the database name
+- If `DacpacFilesPath` is not configured, files are saved to `App_Data/Files`
+- The extracted file is immediately available for download via the download URL
+
+### 6. List Databases (Security Auditing)
 
 **POST** `/api/files/list-databases`
 
@@ -265,7 +312,7 @@ Content-Type: application/json
 - Only lists ONLINE databases
 - Default timeout is 30 seconds
 
-### 6. List All Files
+### 7. List All Files
 
 **GET** `/api/files`
 
@@ -346,6 +393,18 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/files/list-databases" `
     -Method Post `
     -ContentType "application/json" `
     -Body $listRequest
+
+# Extract database schema (automatically saves to configured path)
+$extractRequest = @{
+    connectionString = "Server=(local);Database=MyDatabase;Integrated Security=True;"
+    outputFilename = "MyDatabase.bacpac"
+    extractTableData = $false
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/files/extract" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $extractRequest
 ```
 
 ### Using C#
